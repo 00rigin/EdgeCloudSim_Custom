@@ -40,11 +40,11 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 	
 	private int taskIDCounter = 0;
 	
-	//20211016 HJ timeslot 안에 들어온 태스크들 저장소.
+	//20211016 HJ Made some var for timeslot
 	private ArrayList<Task_Custom> taskQueue = new ArrayList<Task_Custom>();
 	private double timeSlotStartTime = 0;
 	private double timeSlotThresh = 3;
-	//timeslot 시작 시간
+	
 	
 	
 	public CustomMobileDeviceManager() throws Exception{
@@ -60,7 +60,7 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 	@Override
 	public UtilizationModel getCpuUtilizationModel() {
 		// TODO Auto-generated method stub
-		//Ȯ�� �ʿ�
+		
 		return new CpuUtilizationModel_Custom();
 	}
 	
@@ -137,26 +137,21 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 				vmType.ordinal());
 	}
 	
-	// 20211016 HJ priority 설정 함수
+	// 20211016 HJ priority 
+	// Sort the task by processing trhoughput
 	private ArrayList<Task_Custom> setPriority() {
 		
+		Map<Double, Task_Custom> taskMap = new TreeMap<Double, Task_Custom>();
 		
-//		ArrayList<Integer> indexList = new ArrayList<>();
-//		ArrayList<Double> throughputList = new ArrayList<>();
-		Map<Double, Task_Custom> taskMap = new TreeMap<Double, Task_Custom>(); // throughhput으로 소팅하기 위해 만든 맵
-		
-		for(int i = 0; i<taskQueue.size(); i++) { // Priority 계산
+		for(int i = 0; i<taskQueue.size(); i++) { // Priority 
 			long _size = taskQueue.get(i).getTaskSize();
 			long _deadline = taskQueue.get(i).getTaskDeadline();
 			double _throughput = (double)_size/(double)_deadline;
-			taskMap.put(_throughput, taskQueue.get(i)); // treemap 이라 key에 따라 알아서 정렬
+			taskMap.put(_throughput, taskQueue.get(i)); // By using treemap, sorting in done automatically
 		}
 		
-		
-		
-		Collection<Task_Custom> values = taskMap.values(); // value 만 뽑기위해서 
-		ArrayList<Task_Custom> PritizedTasks = new ArrayList<Task_Custom>(values); // value값 다시 arraylist 형태로 추
-
+		Collection<Task_Custom> values = taskMap.values(); 
+		ArrayList<Task_Custom> PritizedTasks = new ArrayList<Task_Custom>(values); 
 //		SimLogger.printLine("Sorted antry : " + taskMap.keySet());
 
 		
@@ -168,7 +163,7 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 
 	
 	@Override
-	// 20211016 HJ Timeslot 구현하기 위해 변경됨. -> CloudSim.clock() 사용해서 구현하기.
+	// 20211016 HJ Timeslot 
 	public void submitTask(TaskProperty edgeTask) {
 		// TODO Auto-generated method stub
 		//System.out.println("submitTask");
@@ -180,73 +175,72 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 		
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
 		
-		Task_Custom task = createTask(edgeTask);
+		Task_Custom _task = createTask(edgeTask);
 		
-		Location currentLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(), CloudSim.clock());
+		Location currentLocation = SimManager.getInstance().getMobilityModel().getLocation(_task.getMobileDeviceId(), CloudSim.clock());
 		
-		task.setSubmittedLocation(currentLocation);
+		_task.setSubmittedLocation(currentLocation);
 		
-		SimLogger.getInstance().addLog(task.getMobileDeviceId(), 
-				task.getCloudletId(), 
-				task.getTaskType(), 
-				(int)task.getCloudletLength(),
-				(int)task.getCloudletFileSize(),
-				(int)task.getCloudletOutputSize());
+		SimLogger.getInstance().addLog(_task.getMobileDeviceId(), 
+				_task.getCloudletId(), 
+				_task.getTaskType(), 
+				(int)_task.getCloudletLength(),
+				(int)_task.getCloudletFileSize(),
+				(int)_task.getCloudletOutputSize());
 		
-		//�ۼ� �ʿ� ���ɽ�Ʈ������ �θ��� �κ�. // �������� �� edge id ��
-		// 20211016 HJ timeslot 구현 위해 이 아래 구현
-		// 원본은 else 안에 들어
+		
+		// 20211016 HJ timeslot 
+		
 		if(taskQueue.size() == 0)
 			timeSlotStartTime = CloudSim.clock();
-		if(CloudSim.clock() - timeSlotStartTime < timeSlotThresh) { // timeslot 임계시간 안지나면 태스크는 걍 큐에 넣
-			taskQueue.add(task);
+		if(CloudSim.clock() - timeSlotStartTime < timeSlotThresh) {
+			taskQueue.add(_task);
 		}
-		else { // timeslo 임계 시간 지난 경우 -> priority 설정하고 sorting, 후 for 돌려서 하나씩 실행해줌
+		else { // larger than time th
 //			SimLogger.printLine("Task : " + taskQueue);
-			ArrayList<Task_Custom> PritizedTasks = setPriority(); // priority 순서대로(높->낮) 으로 소팅됨
-			taskQueue.clear(); //큐 초기화
+			ArrayList<Task_Custom> PritizedTasks = setPriority(); // prioritized Tasks.
+			taskQueue.clear(); //init the Q
 			
 			
 			for(int i = 0; i<PritizedTasks.size(); i++) {
-								
+				Task_Custom task = PritizedTasks.get(i);
 				
+				//original code
+				int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task); 
 				
+//				System.out.println("nextHopId : " + nextHopId);
 				
+				delay = networkModel.getUploadDelay(task.getMobileDeviceId(), nextHopId, task);
+				vmType = SimSettings.VM_TYPES.EDGE_VM.ordinal();
+				delayType = NETWORK_DELAY_TYPES.WAN_DELAY;
+				nextEvent = REQUEST_RECEIVED_BY_EDGE_DEVICE;
+				nextDeviceForNetworkModel = SimSettings.EDGE_ORCHESTRATOR_ID;
+				
+				Vm selectedVM = SimManager.getInstance().getEdgeOrchestrator().getVmToOffload(task, nextHopId);
+				
+				if(selectedVM != null) {
+					task.setAssociatedDatacenterId(nextHopId);
+					
+					task.setAssociatedHostId(selectedVM.getHost().getId());
+					
+					task.setAssociatedVmId(selectedVM.getId());
+					
+					getCloudletList().add(task);
+					bindCloudletToVm(task.getCloudletId(), selectedVM.getId());
+					
+					networkModel.uploadStarted(currentLocation, nextDeviceForNetworkModel);
+					
+					SimLogger.getInstance().taskStarted(task.getCloudletId(), CloudSim.clock());
+					SimLogger.getInstance().setUploadDelay(task.getCloudletId(), delay, delayType);
+
+					schedule(getId(), delay, nextEvent, task);
+				}
 				
 				
 			}
 			
 		}
-		//original code
-		int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task); 
 		
-//		System.out.println("nextHopId : " + nextHopId);
-		
-		delay = networkModel.getUploadDelay(task.getMobileDeviceId(), nextHopId, task);
-		vmType = SimSettings.VM_TYPES.EDGE_VM.ordinal();
-		delayType = NETWORK_DELAY_TYPES.WAN_DELAY;
-		nextEvent = REQUEST_RECEIVED_BY_EDGE_DEVICE;
-		nextDeviceForNetworkModel = SimSettings.EDGE_ORCHESTRATOR_ID;
-		
-		Vm selectedVM = SimManager.getInstance().getEdgeOrchestrator().getVmToOffload(task, nextHopId);
-		
-		if(selectedVM != null) {
-			task.setAssociatedDatacenterId(nextHopId);
-			
-			task.setAssociatedHostId(selectedVM.getHost().getId());
-			
-			task.setAssociatedVmId(selectedVM.getId());
-			
-			getCloudletList().add(task);
-			bindCloudletToVm(task.getCloudletId(), selectedVM.getId());
-			
-			networkModel.uploadStarted(currentLocation, nextDeviceForNetworkModel);
-			
-			SimLogger.getInstance().taskStarted(task.getCloudletId(), CloudSim.clock());
-			SimLogger.getInstance().setUploadDelay(task.getCloudletId(), delay, delayType);
-
-			schedule(getId(), delay, nextEvent, task);
-		}
 
 		
 		

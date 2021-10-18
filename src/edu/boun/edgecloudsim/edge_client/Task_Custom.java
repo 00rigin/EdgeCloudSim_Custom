@@ -29,6 +29,7 @@ public class Task_Custom extends Cloudlet {
 	// KSC�� ���� �߰���
 	private long taskSize;
 	private long deadline;
+	private int priority;
 
 	public Task_Custom(int _mobileDeviceId, int cloudletId, long cloudletLength, int pesNumber,
 			long cloudletFileSize, long cloudletOutputSize,
@@ -53,11 +54,19 @@ public class Task_Custom extends Cloudlet {
 	public void setDeadline(long _deadline) {
 		deadline = _deadline;
 	}
+	
+	public void setPriority(int _class_) {
+		priority = _class_;
+	}
+	
 	public long getTaskSize() {
 		return taskSize;
 	}
 	public long getTaskDeadline() {
 		return deadline;
+	}
+	public int getTaskPriority() {
+		return priority;
 	}
 	
 	public void setSubmittedLocation(Location _submittedLocation){
