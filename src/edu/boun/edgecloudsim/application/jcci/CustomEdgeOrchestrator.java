@@ -42,7 +42,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 	}
 
 	@Override
-	public int getDeviceToOffload(Task_Custom task) { // 태스크가 한개일때.
+	public int getDeviceToOffload(Task_Custom task) { 
 		// TODO Auto-generated method stub
 		int result = 0;
 		//dummy task to simulate a task with 1 Mbit file size to upload and download 
@@ -52,10 +52,10 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 		Location sourcePointLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(), CloudSim.clock());
 		double edgeUtilization = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(sourcePointLocation.getServingWlanId());
 		
-		// 20211013 현준 KSC논문 기법
+		// 20211013 HJ for KSC
 		if(policy.equals("PROPOSED")) {
 			
-			// 랜덤기법 참고용
+			
 //			else if(policy.equals("RANDOM")) {
 //				
 //				List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
@@ -67,7 +67,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 //			SimLogger.printLine("Task : " + task.getMobileDeviceId());
 			
 			
-			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); // 엣지서버 리스트
+			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); 
 			List<ResCloudlet> exeList= vmArray.get(0).getCloudletScheduler().getCloudletExecList(); 
 			List<Double> mipsShare = vmArray.get(0).getCloudletScheduler().getCurrentMipsShare();
 			
@@ -96,10 +96,12 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 			
 			
 			
+			
+			
 		}
 		
 
-		// 20210301 현준 KCC논문 기법
+		// 20210301 for kcc
 		else if(policy.equals("CONV") || policy.equals("PROPOSED_WO_RA")) {
 			//resource prediction
 			//deadline : 500ms
@@ -121,8 +123,8 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 			
 			if(utilizationByTask < 70) {
 				//offloading
-				task.setAllocationResource(requiredResource); // (requiredResource) 만큼 태스크에 리소스 할당하기.
-				result = sourcePointLocation.getServingWlanId(); // ES 아이디 가져오기
+				task.setAllocationResource(requiredResource); // (requiredResource) 
+				result = sourcePointLocation.getServingWlanId(); // ES ID
 			}else {
 				double randomValue = SimUtils.getRandomDoubleNumber(0.0, 1.0);
 				List<ResCloudlet> execList = vmArray.get(0).getCloudletScheduler().getCloudletExecList();
@@ -143,7 +145,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 					task.setAllocationResource(requiredResource);
 					result = sourcePointLocation.getServingWlanId();
 				}else {
-					//����������
+					
 					ArrayList<Integer> edge = new ArrayList<>(Arrays.asList(0,1,2,3,4,5,6,7,8,9));
 					int collaborationTarget = Integer.MAX_VALUE;
 					double localDelay = 0;
@@ -245,7 +247,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 					double total = 0;
 					ArrayList<Double> completionTime = new ArrayList<Double>();
 					
-					for(int i = finishList.size() - 1; i > numTask; i--) { // ���� ���� �ʿ�
+					for(int i = finishList.size() - 1; i > numTask; i--) { // 
 						completionTime.add(finishList.get(i).getClouddletFinishTime() - finishList.get(i).getCloudletArrivalTime());
 						totalFinishTime += finishList.get(i).getClouddletFinishTime() - finishList.get(i).getCloudletArrivalTime();
 					}
@@ -360,7 +362,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 				}
 			}
 			
-			task.setAllocationResource(vmArray.get(0).getMips()); // 엣지서버 가져와서 그 엣지서버의 mips 
+			task.setAllocationResource(vmArray.get(0).getMips()); // 
 			result = minIndex;
 		}
 		
@@ -406,24 +408,24 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 				for(int i = 0; i<10; i++) {
 					
 
-					List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(i); // 각 ES에서 vm list 가져오기
-					List<ResCloudlet> eList = vmList.get(0).getCloudletScheduler().getCloudletExecList(); // 각 vm에서 돌리고 있는 작업 리스트 가져오기
+					List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(i); 
+					List<ResCloudlet> eList = vmList.get(0).getCloudletScheduler().getCloudletExecList(); 
 					Long[] remainLet = new Long[10];
 					/*
 					ArrayList<Long> remainLet = new ArrayList<Long>();
 					*/
 					for(int j = 0; j<10; j++) {
-						remainLet[j]=(long)0; // 일단 다 0으로 채움
+						remainLet[j]=(long)0; 
 					}
 					
 					for(ResCloudlet rc : eList) {
 						if(rc.getRemainingCloudletLength()!=0) {
-							remainLet[i] = rc.getRemainingCloudletLength();// 각 엣지서버별 남은 작업 길이
+							remainLet[i] = rc.getRemainingCloudletLength();//
 						}
 						 //System.out.println("RL : "+rc.getRemainingCloudletLength());
 					}
 					
-					if(i!=currentEdge) { // 자기자신 빼고
+					if(i!=currentEdge) {
 						
 						double currentEdgeUtil = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(i); // current edge server utilization
 						communicationDelay = networkModel.getUploadDelay(task.getMobileDeviceId(), i, task); 
@@ -496,7 +498,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 		else if(policy.equals("RANDOM_NEIGHBOR")) {
 			List<EdgeVM> localVM = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
 			double localUsage = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(sourcePointLocation.getServingWlanId());
-			result = sourcePointLocation.getServingWlanId(); // ���� ������
+			result = sourcePointLocation.getServingWlanId(); 
 			
 			
 			int[] nei1 = {1,2,3};
@@ -528,11 +530,11 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 			int randomIndex = SimUtils.getRandomNumber(0, curnei.length-1);
 			result = curnei[randomIndex]-1;
 			/*
-			if(localUsage < 100) { // ���� 99 �����̸� ���� ó��
-				task.setAllocationResource((int)localVM.get(0).getMips()); // ���ҽ� �Ҵ�
-				result = sourcePointLocation.getServingWlanId(); // ������� ���� // ���⼭�� �� �ڽ�
+			if(localUsage < 100) { 
+				task.setAllocationResource((int)localVM.get(0).getMips()); 
+				result = sourcePointLocation.getServingWlanId(); 
 			}
-			else { // ���� 40 �̻��̸� ���� ���̹� ������
+			else { 
 				
 				int[] curnei = neimaps.get(result); 
 				task.setAllocationResource((int)localVM.get(0).getMips()); 
@@ -548,7 +550,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 		else if(policy.equals("LOCAL")) {
 			List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
 			task.setAllocationResource(vmList.get(0).getMips());
-			result = sourcePointLocation.getServingWlanId(); // ������ġ..??
+			result = sourcePointLocation.getServingWlanId(); 
 			SimLogger.printLine("Random Edge ID :"+ result);
 		}
 		
