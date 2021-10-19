@@ -26,6 +26,9 @@ import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.TaskProperty;
 
+import Jenks.Jenks;
+import Jenks.Jenks.Breaks;
+
 //import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 
 
@@ -43,7 +46,10 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 	//20211016 HJ Made some var for timeslot
 	private ArrayList<Task_Custom> taskQueue = new ArrayList<Task_Custom>();
 	private double timeSlotStartTime = 0;
-	private double timeSlotThresh = 3;
+	private double timeSlotThresh = 0.2;
+	// 20211019 HJ Made for EWMA
+	private double[] EWMA = {0,0}; // Store the first and second divider with First class's max and Second class's max
+	private double alpha = 0.5;
 	
 	
 	
@@ -141,19 +147,68 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 	// Sort the task by processing trhoughput
 	private ArrayList<Task_Custom> setPriority() {
 		
+//		System.out.print("# of Tasks : ");
+//		System.out.println(taskQueue.size());
+		
 		Map<Double, Task_Custom> taskMap = new TreeMap<Double, Task_Custom>();
 		
 		for(int i = 0; i<taskQueue.size(); i++) { // Priority 
 			long _size = taskQueue.get(i).getTaskSize();
 			long _deadline = taskQueue.get(i).getTaskDeadline();
+			if(_deadline <= 0)
+				_deadline = 1;
 			double _throughput = (double)_size/(double)_deadline;
 			taskMap.put(_throughput, taskQueue.get(i)); // By using treemap, sorting in done automatically
 		}
 		
-		Collection<Task_Custom> values = taskMap.values(); 
-		ArrayList<Task_Custom> PritizedTasks = new ArrayList<Task_Custom>(values); 
-//		SimLogger.printLine("Sorted antry : " + taskMap.keySet());
+		Collection<Task_Custom> values = taskMap.values();
+		Collection<Double> keys = taskMap.keySet();
+		ArrayList<Task_Custom> PritizedTasks = new ArrayList<Task_Custom>(values);
+		ArrayList<Double> throughput = new ArrayList<Double>(keys);
+		
+		double[] list =	new double[throughput.size()];
+		for(int i = 0; i<list.length;i++) {
+			list[i] = throughput.get(i).doubleValue();
+		}
+		
+		// 20211019 HJ Jenks Break
+		Jenks jen = new Jenks();
+		jen.addValues(list);
+		Breaks ben = jen.computeBreaks(3);
+		
+		// 20211019 HJ EWMA
+		if(EWMA[0]==0 && EWMA[1] == 0) {
+			for(int i = 0; i<2; i++) 
+				EWMA[i] = ben.getDivider(i);
+		}
+		else {
+			for(int i = 0; i<2; i++) 
+				EWMA[i] = alpha*ben.getDivider(i) + (1-alpha)*EWMA[i]; // New divider
+		}
+		
+		// Set Priority
+		for(int i = 0; i<throughput.size(); i++) {
+			if(throughput.get(i)<=EWMA[0])
+				PritizedTasks.get(i).setPriority(1);
+			else if (throughput.get(i)>EWMA[1])
+				PritizedTasks.get(i).setPriority(3);
+			else
+				PritizedTasks.get(i).setPriority(2);
+		}
+		
 
+
+//		System.out.println(ben);
+//		for(int i = 0; i<ben.getBreaks().length; i++) {
+//			System.out.println(ben.getBreaks()[i]);
+//		}
+
+		
+		
+		
+		
+//		SimLogger.printLine("Sorted antry : " + throughput);
+		
 		
 		
 		
@@ -193,13 +248,18 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 		
 		if(taskQueue.size() == 0)
 			timeSlotStartTime = CloudSim.clock();
-		if(CloudSim.clock() - timeSlotStartTime < timeSlotThresh) {
+		if(CloudSim.clock() - timeSlotStartTime < timeSlotThresh || taskQueue.size()<3) {
 			taskQueue.add(_task);
 		}
 		else { // larger than time th
 //			SimLogger.printLine("Task : " + taskQueue);
 			ArrayList<Task_Custom> PritizedTasks = setPriority(); // prioritized Tasks.
 			taskQueue.clear(); //init the Q
+			
+//			// Check Priority of tasks
+//			for(int i = 0; i<PritizedTasks.size(); i++) {
+//				System.out.println(PritizedTasks.get(i).getTaskPriority());
+//			}
 			
 			
 			for(int i = 0; i<PritizedTasks.size(); i++) {
