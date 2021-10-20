@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.cloudbus.cloudsim.ResCloudlet;
+import org.cloudbus.cloudsim.UtilizationModelFull;
 import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEvent;
@@ -55,26 +56,85 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 		// 20211013 HJ for KSC
 		if(policy.equals("PROPOSED")) {
 			
+			List<EdgeVM> localVM = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); // vm list : 현재는 1개
+			double localUsage = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(sourcePointLocation.getServingWlanId()); // 현재 엣지서버의 유틸라이제이션
+			result = sourcePointLocation.getServingWlanId(); // 협업 대상 초기화 (현재 엣지서버 아이디)
 			
-//			else if(policy.equals("RANDOM")) {
+//			ArrayList<Integer> edge = new ArrayList<>(Arrays.asList(0,1,2,3,4,5,6,7,8,9)); // NUMBER OF EDGE SERVER
+//			int numofEdge = edge.size();
+//			
+//			//dummy task to simulate a task with 1 Mbit file size to upload and download 
+//			Task_Custom dummyTask = new Task_Custom(0, 0, 0, 0, 128, 128, new UtilizationModelFull(), new UtilizationModelFull(), new UtilizationModelFull(), 0);
+//			int processingThroughput = 0;
+//			
+//			for(int i = 0; i<numofEdge; i++) { 
+//				// Transmission delay
+//				double wanDelay = SimManager.getInstance().getNetworkModel().getUploadDelay(task.getMobileDeviceId(),
+//						i, dummyTask /* 1 Mbit */);
+//				// TaskDeadline
+//				long deadline = task.getTaskDeadline();
 //				
-//				List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
-//				task.setAllocationResource(vmList.get(0).getMips());
-//				result = SimUtils.getRandomNumber(0, 9);
-//				//SimLogger.printLine("Random Edge ID :"+ result);
+//				
 //			}
+			
+			
+			
+			
+			
+			
+			////////////////////////RANDOM NEIGHBOR////////////////////////////
+
+			
+//			System.out.println(localVM.size());
+			
+			
+			 
+			
+			
+			int[] nei1 = {1,2,3};
+			int[] nei2 = {1,2,4,5};
+			int[] nei3 = {1,3,4,7,8};
+			int[] nei4 = {2,3,4,6,9};
+			int[] nei5 = {2,5,6,8,10};
+			int[] nei6 = {1,4,5,6,7};
+			int[] nei7 = {3,6,7,9,10};
+			int[] nei8 = {3,5,8,10};
+			int[] nei9 = {4,7,9};
+			int[] nei10 = {5,7,8,10};
+			
+		
+			ArrayList<int[]> neimaps = new ArrayList<int[]>();
+			neimaps.add(nei1);
+			neimaps.add(nei2);
+			neimaps.add(nei3);
+			neimaps.add(nei4);
+			neimaps.add(nei5);
+			neimaps.add(nei6);
+			neimaps.add(nei7);
+			neimaps.add(nei8);
+			neimaps.add(nei9);
+			neimaps.add(nei10);
+			
+			int[] curnei = neimaps.get(result); 
+			task.setAllocationResource((int)localVM.get(0).getMips()); 
+			int randomIndex = SimUtils.getRandomNumber(0, curnei.length-1);
+			result = curnei[randomIndex]-1;
+			//////////////////////////////////////////////////////////////////////////////
+			
+			
+			
 //			
 //			SimLogger.printLine("Task : " + task.getMobileDeviceId());
 			
 			
-			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); 
-			List<ResCloudlet> exeList= vmArray.get(0).getCloudletScheduler().getCloudletExecList(); 
-			List<Double> mipsShare = vmArray.get(0).getCloudletScheduler().getCurrentMipsShare();
-			
-			NetworkModel networkModel = SimManager.getInstance().getNetworkModel();	
-			
-			task.setAllocationResource(vmArray.get(0).getMips());
-			
+//			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); 
+//			List<ResCloudlet> exeList= vmArray.get(0).getCloudletScheduler().getCloudletExecList(); 
+//			List<Double> mipsShare = vmArray.get(0).getCloudletScheduler().getCurrentMipsShare();
+//			
+//			NetworkModel networkModel = SimManager.getInstance().getNetworkModel();	
+//			
+//			task.setAllocationResource(vmArray.get(0).getMips());
+//			
 //			SimLogger.printLine("Task Size : " + task.getTaskSize());
 //			SimLogger.printLine("Task Deadline : " + task.getTaskDeadline());
 //			SimLogger.printLine("Task Throughput : " + (double)task.getTaskSize()/(double)task.getTaskDeadline());
