@@ -17,6 +17,7 @@ import org.cloudbus.cloudsim.core.SimEvent;
 
 import edu.boun.edgecloudsim.edge_client.MobileDeviceManager;
 import edu.boun.edgecloudsim.edge_client.Task_Custom;
+import edu.boun.edgecloudsim.edge_server.EdgeVM;
 import edu.boun.edgecloudsim.network.NetworkModel;
 import edu.boun.edgecloudsim.core.SimManager;
 import edu.boun.edgecloudsim.core.SimSettings;
@@ -189,11 +190,11 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 		// Set Priority
 		for(int i = 0; i<throughput.size(); i++) {
 			if(throughput.get(i)<=EWMA[0])
-				PritizedTasks.get(i).setPriority(1);
+				PritizedTasks.get(i).setPriority(0);
 			else if (throughput.get(i)>EWMA[1])
-				PritizedTasks.get(i).setPriority(3);
-			else
 				PritizedTasks.get(i).setPriority(2);
+			else
+				PritizedTasks.get(i).setPriority(1);
 		}
 		
 
@@ -276,7 +277,9 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 				nextEvent = REQUEST_RECEIVED_BY_EDGE_DEVICE;
 				nextDeviceForNetworkModel = SimSettings.EDGE_ORCHESTRATOR_ID;
 				
-				Vm selectedVM = SimManager.getInstance().getEdgeOrchestrator().getVmToOffload(task, nextHopId);
+//				Vm selectedVM = SimManager.getInstance().getEdgeOrchestrator().getVmToOffload(task, nextHopId);
+				EdgeVM selectedVM = SimManager.getInstance().getEdgeOrchestrator().getVmToOffload(task, nextHopId);
+//				System.out.println(selectedVM.getPriority());
 				
 				if(selectedVM != null) {
 					task.setAssociatedDatacenterId(nextHopId);

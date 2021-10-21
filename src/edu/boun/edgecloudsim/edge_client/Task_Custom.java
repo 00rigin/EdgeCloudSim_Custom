@@ -30,6 +30,7 @@ public class Task_Custom extends Cloudlet {
 	private long taskSize;
 	private long deadline;
 	private int priority;
+	private double[] remainTime = {0,0,0};
 
 	public Task_Custom(int _mobileDeviceId, int cloudletId, long cloudletLength, int pesNumber,
 			long cloudletFileSize, long cloudletOutputSize,
@@ -68,6 +69,16 @@ public class Task_Custom extends Cloudlet {
 	public int getTaskPriority() {
 		return priority;
 	}
+	public void setRemainTime(int _class_, double remain) {
+		remainTime[_class_] = remain;
+	}
+	public double getRemainTime(int _class_) {
+		return remainTime[_class_];
+	}
+	
+	
+	
+	
 	
 	public void setSubmittedLocation(Location _submittedLocation){
 		submittedLocation =_submittedLocation;

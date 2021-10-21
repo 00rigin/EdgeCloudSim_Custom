@@ -20,12 +20,20 @@ import edu.boun.edgecloudsim.core.SimSettings;
 
 public class EdgeVM extends Vm {
 	private SimSettings.VM_TYPES type;
+	private int priority;
 	
 	public EdgeVM(int id, int userId, double mips, int numberOfPes, int ram,
 			long bw, long size, String vmm, CloudletScheduler cloudletScheduler) {
 		super(id, userId, mips, numberOfPes, ram, bw, size, vmm, cloudletScheduler);
 
 		type = SimSettings.VM_TYPES.EDGE_VM;
+	}
+	
+	public void setPriority(int _class_) {
+		priority = _class_;
+	}
+	public int getPriority() {
+		return priority;
 	}
 
 	public SimSettings.VM_TYPES getVmType(){

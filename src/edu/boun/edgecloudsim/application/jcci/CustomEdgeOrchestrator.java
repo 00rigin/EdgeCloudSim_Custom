@@ -22,6 +22,7 @@ import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
+import edu.boun.edgecloudsim.edge_server.EdgeVM;
 
 public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 	
@@ -60,22 +61,33 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 			double localUsage = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(sourcePointLocation.getServingWlanId()); // 현재 엣지서버의 유틸라이제이션
 			result = sourcePointLocation.getServingWlanId(); // 협업 대상 초기화 (현재 엣지서버 아이디)
 			
-//			ArrayList<Integer> edge = new ArrayList<>(Arrays.asList(0,1,2,3,4,5,6,7,8,9)); // NUMBER OF EDGE SERVER
-//			int numofEdge = edge.size();
-//			
-//			//dummy task to simulate a task with 1 Mbit file size to upload and download 
-//			Task_Custom dummyTask = new Task_Custom(0, 0, 0, 0, 128, 128, new UtilizationModelFull(), new UtilizationModelFull(), new UtilizationModelFull(), 0);
-//			int processingThroughput = 0;
-//			
-//			for(int i = 0; i<numofEdge; i++) { 
-//				// Transmission delay
-//				double wanDelay = SimManager.getInstance().getNetworkModel().getUploadDelay(task.getMobileDeviceId(),
-//						i, dummyTask /* 1 Mbit */);
-//				// TaskDeadline
-//				long deadline = task.getTaskDeadline();
-//				
-//				
-//			}
+			
+			ArrayList<Integer> edge = new ArrayList<>(Arrays.asList(0,1,2,3,4,5,6,7,8,9)); // NUMBER OF EDGE SERVER
+			int numofEdge = edge.size();
+			
+			//dummy task to simulate a task with 1 Mbit file size to upload and download 
+			Task_Custom dummyTask = new Task_Custom(0, 0, 0, 0, 128, 128, new UtilizationModelFull(), new UtilizationModelFull(), new UtilizationModelFull(), 0);
+			double processingThroughput = 0;
+			// TaskDeadline
+			long deadline = task.getTaskDeadline();
+			
+			double quTime = task.getRemainTime(task.getTaskPriority());
+			
+			long taskSize = task.getTaskSize();
+			
+			for(int i = 0; i<numofEdge; i++) { 
+				// Transmission delay
+				double wanDelay = SimManager.getInstance().getNetworkModel().getUploadDelay(task.getMobileDeviceId(),
+						i, dummyTask /* 1 Mbit */);
+				
+				
+				double tem_throughput = taskSize/(deadline-wanDelay-quTime);
+				if (tem_throughput > processingThroughput)
+					result = i;
+				
+				
+				
+			}
 			
 			
 			
@@ -91,34 +103,34 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 			 
 			
 			
-			int[] nei1 = {1,2,3};
-			int[] nei2 = {1,2,4,5};
-			int[] nei3 = {1,3,4,7,8};
-			int[] nei4 = {2,3,4,6,9};
-			int[] nei5 = {2,5,6,8,10};
-			int[] nei6 = {1,4,5,6,7};
-			int[] nei7 = {3,6,7,9,10};
-			int[] nei8 = {3,5,8,10};
-			int[] nei9 = {4,7,9};
-			int[] nei10 = {5,7,8,10};
-			
-		
-			ArrayList<int[]> neimaps = new ArrayList<int[]>();
-			neimaps.add(nei1);
-			neimaps.add(nei2);
-			neimaps.add(nei3);
-			neimaps.add(nei4);
-			neimaps.add(nei5);
-			neimaps.add(nei6);
-			neimaps.add(nei7);
-			neimaps.add(nei8);
-			neimaps.add(nei9);
-			neimaps.add(nei10);
-			
-			int[] curnei = neimaps.get(result); 
-			task.setAllocationResource((int)localVM.get(0).getMips()); 
-			int randomIndex = SimUtils.getRandomNumber(0, curnei.length-1);
-			result = curnei[randomIndex]-1;
+//			int[] nei1 = {1,2,3};
+//			int[] nei2 = {1,2,4,5};
+//			int[] nei3 = {1,3,4,7,8};
+//			int[] nei4 = {2,3,4,6,9};
+//			int[] nei5 = {2,5,6,8,10};
+//			int[] nei6 = {1,4,5,6,7};
+//			int[] nei7 = {3,6,7,9,10};
+//			int[] nei8 = {3,5,8,10};
+//			int[] nei9 = {4,7,9};
+//			int[] nei10 = {5,7,8,10};
+//			
+//		
+//			ArrayList<int[]> neimaps = new ArrayList<int[]>();
+//			neimaps.add(nei1);
+//			neimaps.add(nei2);
+//			neimaps.add(nei3);
+//			neimaps.add(nei4);
+//			neimaps.add(nei5);
+//			neimaps.add(nei6);
+//			neimaps.add(nei7);
+//			neimaps.add(nei8);
+//			neimaps.add(nei9);
+//			neimaps.add(nei10);
+//			
+//			int[] curnei = neimaps.get(result); 
+//			task.setAllocationResource((int)localVM.get(0).getMips()); 
+//			int randomIndex = SimUtils.getRandomNumber(0, curnei.length-1);
+//			result = curnei[randomIndex]-1;
 			//////////////////////////////////////////////////////////////////////////////
 			
 			
@@ -627,10 +639,11 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 		return result;
 }
 
-
+// 20211021 HJ vm에 ㅔriority 추가함
 	@Override
-	public Vm getVmToOffload(Task_Custom task, int deviceId) {
-		Vm selectedVM = null;
+//	public Vm getVmToOffload(Task_Custom task, int deviceId) {
+	public EdgeVM getVmToOffload(Task_Custom task, int deviceId) {
+		EdgeVM selectedVM = null;
 		
 		if(deviceId < 10) {
 //			double selectedVmCapacity = 0;
@@ -645,6 +658,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 //				}
 //			}
 			selectedVM = vmArray.get(0);
+			selectedVM.setPriority(task.getTaskPriority());
 		}else {
 			SimLogger.printLine("Unknown device id! The simulation has been terminated.");
 			System.out.println("device id : " + deviceId);

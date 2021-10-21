@@ -1,5 +1,6 @@
 package edu.boun.edgecloudsim.edge_server;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -52,6 +53,9 @@ public abstract class CloudletScheduler_Custom extends CloudletScheduler{
 	 */
 	public CloudletScheduler_Custom() {
 		setPreviousTime(0.0);
+//		cloudletWaitingList = new List<LinkedList<ResCloudlet>>();
+//		cloudletWaitingList = new ArrayList<Lon>
+		cloudletWaitingList = new ArrayList<List<? extends ResCloudlet>>();
 		List<? extends ResCloudlet> highWaitingList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> midWaitingList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> lowWaitingList = new LinkedList<ResCloudlet>();
@@ -59,6 +63,7 @@ public abstract class CloudletScheduler_Custom extends CloudletScheduler{
 		cloudletWaitingList.add(midWaitingList);
 		cloudletWaitingList.add(lowWaitingList);
 		
+		cloudletExecList = new ArrayList<List<? extends ResCloudlet>>();
 		List<? extends ResCloudlet> highExecList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> midExecList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> lowExecList = new LinkedList<ResCloudlet>();
@@ -66,6 +71,7 @@ public abstract class CloudletScheduler_Custom extends CloudletScheduler{
 		cloudletExecList.add(midExecList);
 		cloudletExecList.add(lowExecList);
 		
+		cloudletExecList = new ArrayList<List<? extends ResCloudlet>>();
 		List<? extends ResCloudlet> highPausedList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> midPausedList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> lowPausedList = new LinkedList<ResCloudlet>();
@@ -73,6 +79,7 @@ public abstract class CloudletScheduler_Custom extends CloudletScheduler{
 		cloudletExecList.add(midPausedList);
 		cloudletExecList.add(lowPausedList);
 		
+		cloudletFinishedList = new ArrayList<List<? extends ResCloudlet>>();
 		List<? extends ResCloudlet> highFinishedList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> midFinishedList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> lowFinishedList = new LinkedList<ResCloudlet>();
@@ -80,12 +87,130 @@ public abstract class CloudletScheduler_Custom extends CloudletScheduler{
 		cloudletFinishedList.add(midFinishedList);
 		cloudletFinishedList.add(lowFinishedList);
 		
+		cloudletFailedList = new ArrayList<List<? extends ResCloudlet>>();
 		List<? extends ResCloudlet> highFailedList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> midFailedList = new LinkedList<ResCloudlet>();
 		List<? extends ResCloudlet> lowFailedList = new LinkedList<ResCloudlet>();
 		cloudletFailedList.add(highFailedList);
 		cloudletFailedList.add(midFailedList);
 		cloudletFailedList.add(lowFailedList);
+	}
+	
+	/**
+	 * Gets the cloudlet waiting list.
+	 * 
+	 * @param <T> the generic type
+	 * @return the cloudlet waiting list
+	 */
+	@SuppressWarnings("unchecked")
+	public <T extends ResCloudlet> List<T> getCloudletWaitingList(int _class_) {
+//		System.out.println("111111111111111");
+		return (List<T>) cloudletWaitingList.get(_class_);
+	}
+
+	/**
+	 * Cloudlet waiting list.
+	 * 
+	 * @param <T> the generic type
+	 * @param cloudletWaitingList the cloudlet waiting list
+	 */
+	protected <T extends ResCloudlet> void setCloudletWaitingList(List<T> cloudletWaitingList, int _class_) {
+		this.cloudletWaitingList.remove(_class_);
+		this.cloudletWaitingList.add(_class_, cloudletWaitingList);
+//		this.cloudletWaitingList = cloudletWaitingList;
+	}
+
+	/**
+	 * Gets the cloudlet exec list.
+	 * 
+	 * @param <T> the generic type
+	 * @return the cloudlet exec list
+	 */
+	@SuppressWarnings("unchecked")
+	public <T extends ResCloudlet> List<T> getCloudletExecList(int _class_) {
+//		System.out.println(_class_);
+		return (List<T>) cloudletExecList.get(_class_);
+	}
+
+	/**
+	 * Sets the cloudlet exec list.
+	 * 
+	 * @param <T> the generic type
+	 * @param cloudletExecList the new cloudlet exec list
+	 */
+	protected <T extends ResCloudlet> void setCloudletExecList(List<T> cloudletExecList, int _class_) {
+		this.cloudletExecList.remove(_class_);
+		this.cloudletExecList.add(_class_, cloudletExecList);
+//		this.cloudletExecList = cloudletExecList;
+	}
+
+	/**
+	 * Gets the cloudlet paused list.
+	 * 
+	 * @param <T> the generic type
+	 * @return the cloudlet paused list
+	 */
+	@SuppressWarnings("unchecked")
+	public <T extends ResCloudlet> List<T> getCloudletPausedList(int _class_) {
+		return (List<T>) cloudletPausedList.get(_class_);
+	}
+
+	/**
+	 * Sets the cloudlet paused list.
+	 * 
+	 * @param <T> the generic type
+	 * @param cloudletPausedList the new cloudlet paused list
+	 */
+	protected <T extends ResCloudlet> void setCloudletPausedList(List<T> cloudletPausedList, int _class_) {
+		this.cloudletPausedList.remove(_class_);
+		this.cloudletPausedList.add(_class_, cloudletPausedList);
+//		this.cloudletPausedList = cloudletPausedList;
+	}
+
+	/**
+	 * Gets the cloudlet finished list.
+	 * 
+	 * @param <T> the generic type
+	 * @return the cloudlet finished list
+	 */
+	@SuppressWarnings("unchecked")
+	public <T extends ResCloudlet> List<T> getCloudletFinishedList(int _class_) {
+		return (List<T>) cloudletFinishedList.get(_class_);
+	}
+
+	/**
+	 * Sets the cloudlet finished list.
+	 * 
+	 * @param <T> the generic type
+	 * @param cloudletFinishedList the new cloudlet finished list
+	 */
+	protected <T extends ResCloudlet> void setCloudletFinishedList(List<T> cloudletFinishedList, int _class_) {
+		this.cloudletFinishedList.remove(_class_);
+		this.cloudletFinishedList.add(_class_, cloudletFinishedList);
+//		this.cloudletFinishedList = cloudletFinishedList;
+	}
+
+	/**
+	 * Gets the cloudlet failed list.
+	 * 
+	 * @param <T> the generic type
+	 * @return the cloudlet failed list.
+	 */
+	@SuppressWarnings("unchecked")
+	public <T extends ResCloudlet> List<T>  getCloudletFailedList(int _class_) {
+		return (List<T>) cloudletFailedList.get(_class_);
+	}
+
+	/**
+	 * Sets the cloudlet failed list.
+	 * 
+	 * @param <T> the generic type
+	 * @param cloudletFailedList the new cloudlet failed list.
+	 */
+	protected <T extends ResCloudlet> void setCloudletFailedList(List<T> cloudletFailedList, int _class_) {
+		this.cloudletFailedList.remove(_class_);
+		this.cloudletFailedList.add(_class_, cloudletFailedList);
+//		this.cloudletFailedList = cloudletFailedList;
 	}
 
 //	/**
@@ -311,110 +436,6 @@ public abstract class CloudletScheduler_Custom extends CloudletScheduler{
 //		return currentMipsShare;
 //	}
 //
-	/**
-	 * Gets the cloudlet waiting list.
-	 * 
-	 * @param <T> the generic type
-	 * @return the cloudlet waiting list
-	 */
-	@SuppressWarnings("unchecked")
-	public <T extends ResCloudlet> List<T> getCloudletWaitingList() {
-		System.out.println("111111111111111");
-		return (List<T>) cloudletWaitingList;
-	}
-
-	/**
-	 * Cloudlet waiting list.
-	 * 
-	 * @param <T> the generic type
-	 * @param cloudletWaitingList the cloudlet waiting list
-	 */
-	protected <T extends ResCloudlet> void setCloudletWaitingList(List<T> cloudletWaitingList) {
-		this.cloudletWaitingList = cloudletWaitingList;
-	}
-
-	/**
-	 * Gets the cloudlet exec list.
-	 * 
-	 * @param <T> the generic type
-	 * @return the cloudlet exec list
-	 */
-	@SuppressWarnings("unchecked")
-	public <T extends ResCloudlet> List<T> getCloudletExecList() {
-		return (List<T>) cloudletExecList;
-	}
-
-	/**
-	 * Sets the cloudlet exec list.
-	 * 
-	 * @param <T> the generic type
-	 * @param cloudletExecList the new cloudlet exec list
-	 */
-	protected <T extends ResCloudlet> void setCloudletExecList(List<T> cloudletExecList) {
-		this.cloudletExecList = cloudletExecList;
-	}
-
-	/**
-	 * Gets the cloudlet paused list.
-	 * 
-	 * @param <T> the generic type
-	 * @return the cloudlet paused list
-	 */
-	@SuppressWarnings("unchecked")
-	public <T extends ResCloudlet> List<T> getCloudletPausedList() {
-		return (List<T>) cloudletPausedList;
-	}
-
-	/**
-	 * Sets the cloudlet paused list.
-	 * 
-	 * @param <T> the generic type
-	 * @param cloudletPausedList the new cloudlet paused list
-	 */
-	protected <T extends ResCloudlet> void setCloudletPausedList(List<T> cloudletPausedList) {
-		this.cloudletPausedList = cloudletPausedList;
-	}
-
-	/**
-	 * Gets the cloudlet finished list.
-	 * 
-	 * @param <T> the generic type
-	 * @return the cloudlet finished list
-	 */
-	@SuppressWarnings("unchecked")
-	public <T extends ResCloudlet> List<T> getCloudletFinishedList() {
-		return (List<T>) cloudletFinishedList;
-	}
-
-	/**
-	 * Sets the cloudlet finished list.
-	 * 
-	 * @param <T> the generic type
-	 * @param cloudletFinishedList the new cloudlet finished list
-	 */
-	protected <T extends ResCloudlet> void setCloudletFinishedList(List<T> cloudletFinishedList) {
-		this.cloudletFinishedList = cloudletFinishedList;
-	}
-
-	/**
-	 * Gets the cloudlet failed list.
-	 * 
-	 * @param <T> the generic type
-	 * @return the cloudlet failed list.
-	 */
-	@SuppressWarnings("unchecked")
-	public <T extends ResCloudlet> List<T>  getCloudletFailedList() {
-		return (List<T>) cloudletFailedList;
-	}
-
-	/**
-	 * Sets the cloudlet failed list.
-	 * 
-	 * @param <T> the generic type
-	 * @param cloudletFailedList the new cloudlet failed list.
-	 */
-	protected <T extends ResCloudlet> void setCloudletFailedList(List<T> cloudletFailedList) {
-		this.cloudletFailedList = cloudletFailedList;
-	}
+	
 
 }

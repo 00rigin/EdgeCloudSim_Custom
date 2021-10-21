@@ -16,17 +16,20 @@ import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.core.SimManager;
 import edu.boun.edgecloudsim.edge_client.Task_Custom;
 
-//public class EdgeScheduler_Custom extends CloudletScheduler {
-public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
-	
-	protected int currentCpus;
 
+
+
+//public class EdgeScheduler_Custom extends CloudletScheduler {
+// 20211021 HJ 멀티레벨큐를 하면서 전체 다 수정됨.
+public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
+		/** The number of PEs currently available for the VM using the scheduler,
+	     * according to the mips share provided to it by
+	     * {@link #updateVmProcessing(double, java.util.List)} method. */
+	protected int currentCpus;
+	
 	/** The number of used PEs. */
 	protected int usedPes;
 	
-	
-	
-
 	/**
 	 * Creates a new CloudletSchedulerSpaceShared object. This method must be invoked before
 	 * starting the actual simulation.
@@ -39,14 +42,19 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 		usedPes = 0;
 		currentCpus = 0;
 	}
-
+	
+	public int getPriority(ResCloudlet rcl) {
+		Task_Custom tc = (Task_Custom)rcl.getCloudlet();
+		return tc.getTaskPriority();
+	}
+	
 	@Override
 	public double updateVmProcessing(double currentTime, List<Double> mipsShare) {
 		setCurrentMipsShare(mipsShare);
 		double timeSpam = currentTime - getPreviousTime(); // time since last update
 		double capacity = 0.0;
 		int cpus = 0;
-
+	
 		for (Double mips : mipsShare) { // count the CPUs available to the VMM
 			capacity += mips;
 			if (mips > 0) {
@@ -55,264 +63,332 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 		}
 		currentCpus = cpus;
 		capacity /= cpus; // average capacity of each cpu
-
+	
 		// each machine in the exec list has the same amount of cpu
-		for (ResCloudlet rcl : getCloudletExecList()) {
-			
-			rcl.updateCloudletFinishedSoFar(
-                                (long) (capacity * timeSpam * rcl.getNumberOfPes() * Consts.MILLION));
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+				
+				rcl.updateCloudletFinishedSoFar(
+	                                (long) (capacity * timeSpam * rcl.getNumberOfPes() * Consts.MILLION));
+			}
 		}
+		
 
 		// no more cloudlets in this scheduler
-		if (getCloudletExecList().size() == 0 && getCloudletWaitingList().size() == 0) {
+		// 모든 큐가 다 비면 종료
+		int _sum_ = 0;
+		for(int _class_ = 0; _class_<3; _class_++) {
+			_sum_ = _sum_ + getCloudletExecList(_class_).size() + getCloudletWaitingList(_class_).size();
+		}
+		if(_sum_ == 0) {
 			setPreviousTime(currentTime);
-			
 			return 0.0;
 		}
-
+		
 		// update each cloudlet
-		int finished = 0;
-		List<ResCloudlet> toRemove = new ArrayList<ResCloudlet>();
-		for (ResCloudlet rcl : getCloudletExecList()) {
-			
-			// finished anyway, rounding issue...
-			if (rcl.getRemainingCloudletLength() == 0) {
-				toRemove.add(rcl);
-				cloudletFinish(rcl);
-				finished++;
-			}
-		}
-		getCloudletExecList().removeAll(toRemove);
-
-		// for each finished cloudlet, add a new one from the waiting list
-		if (!getCloudletWaitingList().isEmpty()) {
-			
-			for (int i = 0; i < finished; i++) {
+//		int finished = 0;
+		int[] finished = {0,0,0}; //high, mid, low
+		List[] toRemove = new List[3];
+		List<ResCloudlet> toRemoveHigh = new ArrayList<ResCloudlet>();
+		List<ResCloudlet> toRemoveMid = new ArrayList<ResCloudlet>();
+		List<ResCloudlet> toRemoveLow = new ArrayList<ResCloudlet>();
+		toRemove[0] = toRemoveHigh;
+		toRemove[1] = toRemoveMid;
+		toRemove[2] = toRemoveLow;
+		
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
 				
-				toRemove.clear();
-				for (ResCloudlet rcl : getCloudletWaitingList()) {
-					
-					if ((currentCpus - usedPes) >= rcl.getNumberOfPes()) {
-						rcl.setCloudletStatus(Cloudlet.INEXEC);
-						for (int k = 0; k < rcl.getNumberOfPes(); k++) {
-							rcl.setMachineAndPeId(0, i);
-						}
-						getCloudletExecList().add(rcl);
-						usedPes += rcl.getNumberOfPes();
-						toRemove.add(rcl);
-						break;
-					}
+				// finished anyway, rounding issue...
+				if (rcl.getRemainingCloudletLength() == 0) {
+					toRemove[_class_].add(rcl);
+					cloudletFinish(rcl);
+					finished[_class_]++;
 				}
-				getCloudletWaitingList().removeAll(toRemove);
+			}
+			getCloudletExecList(_class_).removeAll(toRemove[_class_]);
+		}
+		
+	
+		// for each finished cloudlet, add a new one from the waiting list
+		for(int _class_ = 0; _class_<3; _class_++) {
+			if (!getCloudletWaitingList(_class_).isEmpty()) {
+				
+				for (int i = 0; i < finished[_class_]; i++) {
+					
+					toRemove[_class_].clear();
+					for (ResCloudlet rcl : getCloudletWaitingList(_class_)) {
+						
+						if ((currentCpus - usedPes) >= rcl.getNumberOfPes()) {
+							rcl.setCloudletStatus(Cloudlet.INEXEC);
+							for (int k = 0; k < rcl.getNumberOfPes(); k++) {
+								rcl.setMachineAndPeId(0, i);
+							}
+							getCloudletExecList(_class_).add(rcl);
+							usedPes += rcl.getNumberOfPes();
+							toRemove[_class_].add(rcl);
+							break;
+						}
+					}
+					getCloudletWaitingList(_class_).removeAll(toRemove[_class_]);
+				}
 			}
 		}
-
+		
+		//Task_Custom tc = (Task_Custom)rcl.getCloudlet();
+		
 		// estimate finish time of cloudlets in the execution queue
-		double nextEvent = Double.MAX_VALUE;
-		for (ResCloudlet rcl : getCloudletExecList()) {
-			double remainingLength = rcl.getRemainingCloudletLength();
-			double estimatedFinishTime = currentTime + (remainingLength / (capacity * rcl.getNumberOfPes()));
-			if (estimatedFinishTime - currentTime < CloudSim.getMinTimeBetweenEvents()) {
-				estimatedFinishTime = currentTime + CloudSim.getMinTimeBetweenEvents();
-			}
-			if (estimatedFinishTime < nextEvent) {
-				nextEvent = estimatedFinishTime;
+		double nextEvent = Double.MAX_VALUE; // 아마 exe q 끝나는 시간 예측한 값
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+				double remainingLength = rcl.getRemainingCloudletLength();
+				double estimatedFinishTime = currentTime + (remainingLength / (capacity * rcl.getNumberOfPes()));
+				if (estimatedFinishTime - currentTime < CloudSim.getMinTimeBetweenEvents()) {
+					estimatedFinishTime = currentTime + CloudSim.getMinTimeBetweenEvents();
+				}
+				if (estimatedFinishTime < nextEvent) {
+					nextEvent = nextEvent + estimatedFinishTime;
+				}
+				// 2,3 클래스 태스크가 이 큐에서 끝나기까지 기다려야하는 시간
+				if(_class_ == 1) {
+					Task_Custom tc = (Task_Custom)rcl.getCloudlet();
+					tc.setRemainTime(1, estimatedFinishTime - currentTime);
+				}
+				else if(_class_ == 2) {
+					Task_Custom tc = (Task_Custom)rcl.getCloudlet();
+					tc.setRemainTime(2, estimatedFinishTime - currentTime);
+				}
 			}
 		}
+		
 		setPreviousTime(currentTime);
 		return nextEvent;
-	}
-
+	}	
+	
 	@Override
 	public Cloudlet cloudletCancel(int cloudletId) {
+		
+		int _priority_ = 0;
 		// First, looks in the finished queue
-		for (ResCloudlet rcl : getCloudletFinishedList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				getCloudletFinishedList().remove(rcl);
-				return rcl.getCloudlet();
-			}
-		}
-
-		// Then searches in the exec list
-		for (ResCloudlet rcl : getCloudletExecList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				getCloudletExecList().remove(rcl);
-				if (rcl.getRemainingCloudletLength() == 0) {
-					cloudletFinish(rcl);
-				} else {
-					rcl.setCloudletStatus(Cloudlet.CANCELED);
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletFinishedList(_class_)) {
+				if (rcl.getCloudletId() == cloudletId) {
+					_priority_ = getPriority(rcl);
+					getCloudletFinishedList(_class_).remove(rcl);
+					return rcl.getCloudlet();
 				}
-				return rcl.getCloudlet();
 			}
 		}
-
+		
+	
+		// Then searches in the exec list
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+				if (rcl.getCloudletId() == cloudletId) {
+					getCloudletExecList(_class_).remove(rcl);
+					if (rcl.getRemainingCloudletLength() == 0) {
+						cloudletFinish(rcl);
+					} else {
+						rcl.setCloudletStatus(Cloudlet.CANCELED);
+					}
+					return rcl.getCloudlet();
+				}
+			}
+		}
+		
+	
 		// Now, looks in the paused queue
-		for (ResCloudlet rcl : getCloudletPausedList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				getCloudletPausedList().remove(rcl);
-				return rcl.getCloudlet();
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletPausedList(_class_)) {
+				if (rcl.getCloudletId() == cloudletId) {
+					getCloudletPausedList(_class_).remove(rcl);
+					return rcl.getCloudlet();
+				}
 			}
 		}
-
+		
+	
 		// Finally, looks in the waiting list
-		for (ResCloudlet rcl : getCloudletWaitingList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				rcl.setCloudletStatus(Cloudlet.CANCELED);
-				getCloudletWaitingList().remove(rcl);
-				return rcl.getCloudlet();
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletWaitingList(_class_)) {
+				if (rcl.getCloudletId() == cloudletId) {
+					rcl.setCloudletStatus(Cloudlet.CANCELED);
+					getCloudletWaitingList(_class_).remove(rcl);
+					return rcl.getCloudlet();
+				}
 			}
 		}
-
+		
 		return null;
-
+	
 	}
-
 	@Override
 	public boolean cloudletPause(int cloudletId) {
-		boolean found = false;
-		int position = 0;
+		boolean[] found = {false,false,false};
+//		int position = 0;
+		int[] position = {0,0,0};
 
 		// first, looks for the cloudlet in the exec list
-		for (ResCloudlet rcl : getCloudletExecList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				found = true;
-				break;
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+				if (rcl.getCloudletId() == cloudletId) {
+					found[_class_] = true;
+					break;
+				}
+				position[_class_]++;
 			}
-			position++;
 		}
+		
 
-		if (found) {
-			// moves to the paused list
-			ResCloudlet rgl = getCloudletExecList().remove(position);
-			if (rgl.getRemainingCloudletLength() == 0) {
-				cloudletFinish(rgl);
-			} else {
-				rgl.setCloudletStatus(Cloudlet.PAUSED);
-				getCloudletPausedList().add(rgl);
+		for(int _class_ = 0; _class_<3; _class_++) {
+			if (found[_class_]) {
+				// moves to the paused list
+				
+				ResCloudlet rgl = getCloudletExecList(_class_).remove(position[_class_]);
+				if (rgl.getRemainingCloudletLength() == 0) {
+					cloudletFinish(rgl);
+				} else {
+					rgl.setCloudletStatus(Cloudlet.PAUSED);
+					getCloudletPausedList(_class_).add(rgl);
+				}
+				return true;
 			}
-			return true;
-
 		}
+		
 
 		// now, look for the cloudlet in the waiting list
-		position = 0;
-		found = false;
-		for (ResCloudlet rcl : getCloudletWaitingList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				found = true;
-				break;
-			}
-			position++;
+		for(int i = 0; i<3; i++) {
+			position[i] = 0;
+			found[i] = false;
 		}
-
-		if (found) {
-			// moves to the paused list
-			ResCloudlet rgl = getCloudletWaitingList().remove(position);
-			if (rgl.getRemainingCloudletLength() == 0) {
-				cloudletFinish(rgl);
-			} else {
-				rgl.setCloudletStatus(Cloudlet.PAUSED);
-				getCloudletPausedList().add(rgl);
+			
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletWaitingList(_class_)) {
+				if (rcl.getCloudletId() == cloudletId) {
+					found[_class_] = true;
+					break;
+				}
+				position[_class_]++;
 			}
-			return true;
-
+		}
+		
+		for(int _class_ = 0; _class_<3; _class_++) {
+			if (found[_class_]) {
+				// moves to the paused list
+				ResCloudlet rgl = getCloudletWaitingList(_class_).remove(position[_class_]);
+				if (rgl.getRemainingCloudletLength() == 0) {
+					cloudletFinish(rgl);
+				} else {
+					rgl.setCloudletStatus(Cloudlet.PAUSED);
+					getCloudletPausedList(_class_).add(rgl);
+				}
+				return true;
+			}
 		}
 
 		return false;
 	}
-
+	
+	
 	@Override
 	public void cloudletFinish(ResCloudlet rcl) {
+		int priority = getPriority(rcl);
 		rcl.setCloudletStatus(Cloudlet.SUCCESS);
 		rcl.finalizeCloudlet();
-		getCloudletFinishedList().add(rcl);
+		getCloudletFinishedList(priority).add(rcl);
 		usedPes -= rcl.getNumberOfPes();
 	}
-
+	
 	@Override
 	public double cloudletResume(int cloudletId) {
-		boolean found = false;
-		int position = 0;
 
+		boolean[] found = {false,false,false};
+		int[] position = {0,0,0};
+	
 		// look for the cloudlet in the paused list
-		for (ResCloudlet rcl : getCloudletPausedList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				found = true;
-				break;
-			}
-			position++;
-		}
-
-		if (found) {
-			ResCloudlet rcl = getCloudletPausedList().remove(position);
-
-			// it can go to the exec list
-			if ((currentCpus - usedPes) >= rcl.getNumberOfPes()) {
-				rcl.setCloudletStatus(Cloudlet.INEXEC);
-				for (int i = 0; i < rcl.getNumberOfPes(); i++) {
-					rcl.setMachineAndPeId(0, i);
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletPausedList(_class_)) {
+				
+				if (rcl.getCloudletId() == cloudletId) {
+					found[_class_] = true;
+					break;
 				}
-
-				long size = rcl.getRemainingCloudletLength();
-				size *= rcl.getNumberOfPes();
-				rcl.getCloudlet().setCloudletLength(size);
-
-				getCloudletExecList().add(rcl);
-				usedPes += rcl.getNumberOfPes();
-
-				// calculate the expected time for cloudlet completion
-				double capacity = 0.0;
-				int cpus = 0;
-				for (Double mips : getCurrentMipsShare()) {
-					capacity += mips;
-					if (mips > 0) {
-						cpus++;
+				position[_class_]++;
+			}
+		
+			if (found[_class_]) {
+				ResCloudlet rcl = getCloudletPausedList(_class_).remove(position[_class_]);
+		
+				// it can go to the exec list
+				if ((currentCpus - usedPes) >= rcl.getNumberOfPes()) {
+					rcl.setCloudletStatus(Cloudlet.INEXEC);
+					for (int i = 0; i < rcl.getNumberOfPes(); i++) {
+						rcl.setMachineAndPeId(0, i);
 					}
+		
+					long size = rcl.getRemainingCloudletLength();
+					size *= rcl.getNumberOfPes();
+					rcl.getCloudlet().setCloudletLength(size);
+		
+					getCloudletExecList(_class_).add(rcl);
+					usedPes += rcl.getNumberOfPes();
+		
+					// calculate the expected time for cloudlet completion
+					double capacity = 0.0;
+					int cpus = 0;
+					for (Double mips : getCurrentMipsShare()) {
+						capacity += mips;
+						if (mips > 0) {
+							cpus++;
+						}
+					}
+					currentCpus = cpus;
+					capacity /= cpus;
+		
+					long remainingLength = rcl.getRemainingCloudletLength();
+					double estimatedFinishTime = CloudSim.clock()
+							+ (remainingLength / (capacity * rcl.getNumberOfPes()));
+		
+					return estimatedFinishTime;
+				} else {// no enough free PEs: go to the waiting queue
+					rcl.setCloudletStatus(Cloudlet.QUEUED);
+		
+					long size = rcl.getRemainingCloudletLength();
+					size *= rcl.getNumberOfPes();
+					rcl.getCloudlet().setCloudletLength(size);
+		
+					getCloudletWaitingList(_class_).add(rcl);
+					return 0.0;
 				}
-				currentCpus = cpus;
-				capacity /= cpus;
-
-				long remainingLength = rcl.getRemainingCloudletLength();
-				double estimatedFinishTime = CloudSim.clock()
-						+ (remainingLength / (capacity * rcl.getNumberOfPes()));
-
-				return estimatedFinishTime;
-			} else {// no enough free PEs: go to the waiting queue
-				rcl.setCloudletStatus(Cloudlet.QUEUED);
-
-				long size = rcl.getRemainingCloudletLength();
-				size *= rcl.getNumberOfPes();
-				rcl.getCloudlet().setCloudletLength(size);
-
-				getCloudletWaitingList().add(rcl);
-				return 0.0;
+		
 			}
-
 		}
-
 		// not found in the paused list: either it is in in the queue, executing or not exist
 		return 0.0;
-
+	
 	}
-
+	
 	@Override
 	public double cloudletSubmit(Cloudlet cloudlet, double fileTransferTime) {
 		// it can go to the exec list
 		if ((currentCpus - usedPes) >= cloudlet.getNumberOfPes()) {
 			ResCloudlet rcl = new ResCloudlet(cloudlet);
+			int priority = getPriority(rcl);
 			rcl.setCloudletStatus(Cloudlet.INEXEC);
+			
 			for (int i = 0; i < cloudlet.getNumberOfPes(); i++) {
 				rcl.setMachineAndPeId(0, i);
 			}
-			getCloudletExecList().add(rcl);
+			getCloudletExecList(priority).add(rcl);
 			usedPes += cloudlet.getNumberOfPes();
 		} else {// no enough free PEs: go to the waiting queue
 			ResCloudlet rcl = new ResCloudlet(cloudlet);
+			int priority = getPriority(rcl);
 			rcl.setCloudletStatus(Cloudlet.QUEUED);
-			getCloudletWaitingList().add(rcl);
+			getCloudletWaitingList(priority).add(rcl);
 			return 0.0;
 		}
-
+	
 		// calculate the expected time for cloudlet completion
 		double capacity = 0.0;
 		int cpus = 0;
@@ -322,10 +398,10 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 				cpus++;
 			}
 		}
-
+	
 		currentCpus = cpus;
 		capacity /= cpus;
-
+	
 		// use the current capacity to estimate the extra amount of
 		// time to file transferring. It must be added to the cloudlet length
 		double extraSize = capacity * fileTransferTime;
@@ -334,80 +410,99 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 		cloudlet.setCloudletLength(length);
 		return cloudlet.getCloudletLength() / capacity;
 	}
-
+	
 	@Override
 	public double cloudletSubmit(Cloudlet cloudlet) {
 		return cloudletSubmit(cloudlet, 0.0);
 	}
-
+	
 	@Override
 	public int getCloudletStatus(int cloudletId) {
-		for (ResCloudlet rcl : getCloudletExecList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				return rcl.getCloudletStatus();
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+				if (rcl.getCloudletId() == cloudletId) {
+					return rcl.getCloudletStatus();
+				}
 			}
 		}
-
-		for (ResCloudlet rcl : getCloudletPausedList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				return rcl.getCloudletStatus();
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletPausedList(_class_)) {
+				if (rcl.getCloudletId() == cloudletId) {
+					return rcl.getCloudletStatus();
+				}
 			}
 		}
-
-		for (ResCloudlet rcl : getCloudletWaitingList()) {
-			if (rcl.getCloudletId() == cloudletId) {
-				return rcl.getCloudletStatus();
+		for(int _class_ = 0; _class_<3; _class_++) {
+			for (ResCloudlet rcl : getCloudletWaitingList(_class_)) {
+				if (rcl.getCloudletId() == cloudletId) {
+					return rcl.getCloudletStatus();
+				}
 			}
 		}
 
 		return -1;
 	}
-
+	
 	@Override
 	public double getTotalUtilizationOfCpu(double time) {
 		double totalUtilization = 0;
-		for (ResCloudlet gl : getCloudletExecList()) {
-			totalUtilization += gl.getCloudlet().getUtilizationOfCpu(time);
+		for(int _class_=0; _class_<3; _class_++) {
+			for (ResCloudlet gl : getCloudletExecList(_class_)) {
+				totalUtilization += gl.getCloudlet().getUtilizationOfCpu(time);
+			}
 		}
 		return totalUtilization;
 	}
-
+	
 	@Override
 	public boolean isFinishedCloudlets() {
-		return getCloudletFinishedList().size() > 0;
+		for(int _class_=0; _class_<3; _class_++) {
+			if(getCloudletFinishedList(_class_).size() > 0)
+				return true;
+		}
+		return false;
+//		return getCloudletFinishedList().size() > 0; // 사이즈가 0보다 크면 true 리턴
 	}
-
+	
 	@Override
 	public Cloudlet getNextFinishedCloudlet() {
-		if (getCloudletFinishedList().size() > 0) {
-			return getCloudletFinishedList().remove(0).getCloudlet();
+		for(int _class_ = 0; _class_<3; _class_++) {
+			if (getCloudletFinishedList(_class_).size() > 0) {
+				return getCloudletFinishedList(_class_).remove(0).getCloudlet();
+			}
 		}
 		return null;
 	}
-
+	
 	@Override
 	public int runningCloudlets() {
-		return getCloudletExecList().size();
-	}
+		int _sum_ = 0;
+		for(int _class_ = 0; _class_<3; _class_ ++) 
+			_sum_+=getCloudletExecList(_class_).size();
 
+		return _sum_;
+//		return getCloudletExecList().size();
+	}
+	
 	/**
 	 * Returns the first cloudlet to migrate to another VM.
 	 * 
 	 * @return the first running cloudlet
 	 * @pre $none
 	 * @post $none
-         * 
-         * @todo it doesn't check if the list is empty
+	     * 
+	     * @todo it doesn't check if the list is empty
 	 */
 	@Override
 	public Cloudlet migrateCloudlet() {
-		ResCloudlet rcl = getCloudletExecList().remove(0);
+		
+		ResCloudlet rcl = getCloudletExecList(0).remove(0);
 		rcl.finalizeCloudlet();
 		Cloudlet cl = rcl.getCloudlet();
 		usedPes -= cl.getNumberOfPes();
 		return cl;
 	}
-
+	
 	@Override
 	public List<Double> getCurrentRequestedMips() {
 		List<Double> mipsShare = new ArrayList<Double>();
@@ -418,10 +513,10 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 		}
 		return mipsShare;
 	}
-
+	
 	@Override
 	public double getTotalCurrentAvailableMipsForCloudlet(ResCloudlet rcl, List<Double> mipsShare) {
-                /*@todo The param rcl is not being used.*/
+	            /*@todo The param rcl is not being used.*/
 		double capacity = 0.0;
 		int cpus = 0;
 		for (Double mips : mipsShare) { // count the cpus available to the vmm
@@ -434,6 +529,7 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 		capacity /= cpus; // average capacity of each cpu
 		return capacity;
 	}
+
 
 	@Override
 	public double getTotalCurrentAllocatedMipsForCloudlet(ResCloudlet rcl, double time) {   
@@ -455,7 +551,7 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 		// TODO Auto-generated method stub
 		return 0;
 	}
-
+	
 	@Override
 	public double getCurrentRequestedUtilizationOfBw() {
                 //@todo the method isn't in fact implemented
@@ -464,340 +560,278 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 	}
 	
 	
+//	protected int currentCpus;
+//
+//	/** The number of used PEs. */
+//	protected int usedPes;
 //	
 //	
-//	/** The number of PEs currently available for the VM using the scheduler,
-//         * according to the mips share provided to it by
-//         * {@link #updateVmProcessing(double, java.util.List)} method. */
-//	protected int currentCPUs;
-//	protected ArrayList<ArrayList<ResCloudlet>> taskMap;
+//	
 //
 //	/**
-//	 * Creates a new CloudletSchedulerTimeShared object. This method must be invoked before starting
-//	 * the actual simulation.
+//	 * Creates a new CloudletSchedulerSpaceShared object. This method must be invoked before
+//	 * starting the actual simulation.
 //	 * 
 //	 * @pre $none
 //	 * @post $none
 //	 */
-//	/*
-//	 * HJ 스케줄러 수정해야하는 부분
-//	 * 
-//	 * */
 //	public EdgeScheduler_Custom() {
 //		super();
-//		currentCPUs = 0;
-//		taskMap = new ArrayList<>();
-//		for(int i = 0; i < 4; i++) {
-//			ArrayList<ResCloudlet> taskList = new ArrayList<ResCloudlet>();
-//			taskMap.add(taskList);
-//		}
-//		
-//		
+//		usedPes = 0;
+//		currentCpus = 0;
 //	}
+//	
+//	
 //
 //	@Override
 //	public double updateVmProcessing(double currentTime, List<Double> mipsShare) {
 //		setCurrentMipsShare(mipsShare);
-//		double timeSpam = currentTime - getPreviousTime();
-//		// rcl : ResCloudlet list
-//		// tc : Task_Custom
+//		double timeSpam = currentTime - getPreviousTime(); // time since last update
+//		double capacity = 0.0;
+//		int cpus = 0;
 //
-//		for (ResCloudlet rcl : getCloudletExecList()) {
-//			Task_Custom tc = (Task_Custom)rcl.getCloudlet();
-//			System.out.println(rcl.getCloudletId());
-//			System.out.println(tc);
-//			rcl.updateCloudletFinishedSoFar((long) (tc.getAllocatedReousrce() * timeSpam * rcl.getNumberOfPes() * Consts.MILLION));
+//		for (Double mips : mipsShare) { // count the CPUs available to the VMM
+//			capacity += mips;
+//			if (mips > 0) {
+//				cpus++;
+//			}
 //		}
+//		currentCpus = cpus;
+//		capacity /= cpus; // average capacity of each cpu
 //
-//		if (getCloudletExecList().size() == 0) {
+//		// each machine in the exec list has the same amount of cpu
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+//				
+//				rcl.updateCloudletFinishedSoFar(
+//	                                (long) (capacity * timeSpam * rcl.getNumberOfPes() * Consts.MILLION));
+//			}
+//		}
+//		
+//
+//		// no more cloudlets in this scheduler
+//		// 모든 큐가 다 비면 종료
+//		int _sum_ = 0;
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			_sum_ = _sum_ + getCloudletExecList(_class_).size() + getCloudletWaitingList(_class_).size();
+//		}
+//		if(_sum_ == 0) {
 //			setPreviousTime(currentTime);
 //			return 0.0;
 //		}
-//
-//		// check finished cloudlets
-//		double nextEvent = Double.MAX_VALUE;
-//		int finished = 0;
-//		List<ResCloudlet> toRemove = new ArrayList<ResCloudlet>();
-//		for (ResCloudlet rcl : getCloudletExecList()) {
-//			
-//			long remainingLength = rcl.getRemainingCloudletLength();
-//			if (remainingLength == 0) {// finished: remove from the list
-//				
-//				for (int i = 0; i < taskMap.size(); i++) {
-//					if(taskMap.get(i).contains(rcl)) {
-//						taskMap.get(i).remove(rcl);
-//						break;
-//					}
-//				}
-//				toRemove.add(rcl);
-//				finished++;
-//				cloudletFinish(rcl);
-//			}
-//		}
-//		getCloudletExecList().removeAll(toRemove);
 //		
-//		if (!getCloudletWaitingList().isEmpty()) {
-//			if(SimManager.getInstance().getOrchestratorPolicy().equals("PROPOSED")) {
-//				//
-//				toRemove.clear();
-//				for(int k = 0; k < getCloudletWaitingList().size(); k ++) {
-//					ResCloudlet rc = getCloudletWaitingList().get(k);
-//					double minUse = mipsShare.get(0);
-//					int index = 0;
-//					double availResource = 0;
-//					
-//					for(int i = 0; i < taskMap.size(); i++) {
-//						double usage = 0;
-//						
-//						for(ResCloudlet rcl : taskMap.get(i)) {
-//							Task_Custom tc = (Task_Custom)rcl.getCloudlet();
-//							usage += tc.getAllocatedReousrce();
-//						}
-//						
-//						if(usage < minUse) {
-//							minUse = usage;
-//							index = i;
-//						}
-//					}
-//					
-//					availResource = mipsShare.get(0) - minUse;
-//					double minRemainLength = 0;
-//					double minallocResource = 1;
-//					
-//					if(taskMap.get(index).size() > 0) {
-//						minRemainLength = Double.MAX_VALUE;
-//						for(ResCloudlet rcl : taskMap.get(index)) {
-//							Task_Custom tc = (Task_Custom)rcl.getCloudlet();
-//							if(rcl.getRemainingCloudletLength() < minRemainLength) {
-//								minRemainLength = rcl.getRemainingCloudletLength();
-//								minallocResource = tc.getAllocatedReousrce();
-//							}
-//						}
-//					}
-//					
-//					if((rc.getCloudletLength() / availResource) < 
-//							(rc.getCloudletLength() / (availResource + minallocResource) + minRemainLength / minallocResource)) {
-//						Task_Custom tc = (Task_Custom)rc.getCloudlet();
-//						double time = Math.max(0.5 - (CloudSim.clock() - tc.getCreationTime()), CloudSim.clock() - tc.getCreationTime());
-//						double requireResource = rc.getCloudletLength() / time;
-//						
-//						if(availResource >= requireResource) {
-//							double remainResource = availResource - requireResource;
-//							ResCloudlet rc2 = k != getCloudletWaitingList().size() ? getCloudletWaitingList().get(k+1) : null;
-//							double rc2Require = 0;
-//							if(rc2 != null) {
-//								Task_Custom tc2 = (Task_Custom)rc2.getCloudlet();
-//								rc2Require = rc2.getCloudletLength() / (Math.max(0.5 - (CloudSim.clock() - tc2.getCreationTime()), CloudSim.clock() - tc2.getCreationTime()));
-//							}
-//							
-//							double discount = Math.sqrt(Math.abs((requireResource - rc2Require) / remainResource));
-//							
-//							for(double j = remainResource; j > 0; j-=10) {
-//								double alloc = j * (1 + discount);
-//								
-//								if(alloc <= remainResource) {
-//									tc.setAllocationResource(j);
-//								}
-//							}
-//							
-//							rc.setCloudletStatus(Cloudlet.INEXEC);
-//							getCloudletExecList().add(rc);
-//							toRemove.add(rc);
-//						}else {
-//							tc.setAllocationResource(availResource);
-//							rc.setCloudletStatus(Cloudlet.INEXEC);
-//							getCloudletExecList().add(rc);
-//							toRemove.add(rc);
-//						}
-//					}else {
-//						break;
-//					}
-//				}
-//			}else {
-//				toRemove.clear();
-//				for(ResCloudlet rcl : getCloudletWaitingList()) {
-//					if(rcl == null) break;
-//					Task_Custom tc = (Task_Custom)rcl.getCloudlet();
-//					
-//					double minUsage = mipsShare.get(0);
-//					int index = 0;
-//					for(int j = 0; j < taskMap.size(); j++) {
-//						double usage = 0;
-//						for(ResCloudlet rc : taskMap.get(j)){
-//							Task_Custom t = (Task_Custom)rc.getCloudlet();
-//							usage += t.getAllocatedReousrce();
-//						}
-//						
-//						if(minUsage > usage) {
-//							minUsage = usage;
-//							index = j;
-//						}
-//					}
-//					
-//					if (mipsShare.get(index) - minUsage >= tc.getAllocatedReousrce()) {
-//						rcl.setCloudletStatus(Cloudlet.INEXEC);
-//						for(int k = 0; k < rcl.getNumberOfPes(); k++) {
-//							rcl.setMachineAndPeId(0, k);
-//						}
-//						getCloudletExecList().add(rcl);
-//						taskMap.get(index).add(rcl);
-//						toRemove.add(rcl);
-//					} else {
-//						break;
-//					}
+//
+//		// update each cloudlet
+////		int finished = 0;
+//		int[] finished = {0,0,0}; //high, mid, low
+//		List[] toRemove = new List[3];
+//		List<ResCloudlet> toRemoveHigh = new ArrayList<ResCloudlet>();
+//		List<ResCloudlet> toRemoveMid = new ArrayList<ResCloudlet>();
+//		List<ResCloudlet> toRemoveLow = new ArrayList<ResCloudlet>();
+//		toRemove[0] = toRemoveHigh;
+//		toRemove[1] = toRemoveMid;
+//		toRemove[2] = toRemoveLow;
+//		
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+//				
+//				// finished anyway, rounding issue...
+//				if (rcl.getRemainingCloudletLength() == 0) {
+//					toRemove[_class_].add(rcl);
+//					cloudletFinish(rcl);
+//					finished[_class_]++;
 //				}
 //			}
-//			getCloudletWaitingList().removeAll(toRemove);
+//			getCloudletExecList(_class_).removeAll(toRemove[_class_]);
 //		}
+//		
 //
-//		// estimate finish time of cloudlets
-//		for (ResCloudlet rcl : getCloudletExecList()) {
-//			Task_Custom tc = (Task_Custom)rcl.getCloudlet();
-//			double estimatedFinishTime = currentTime
-//					+ (rcl.getRemainingCloudletLength() / (tc.getAllocatedReousrce() * rcl.getNumberOfPes()));
-//			if (estimatedFinishTime - currentTime < CloudSim.getMinTimeBetweenEvents()) {
-//				estimatedFinishTime = currentTime + CloudSim.getMinTimeBetweenEvents();
-//			}
-//
-//			if (estimatedFinishTime < nextEvent) {
-//				nextEvent = estimatedFinishTime;
+//		// for each finished cloudlet, add a new one from the waiting list
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			if (!getCloudletWaitingList(_class_).isEmpty()) {
+//				
+//				for (int i = 0; i < finished[_class_]; i++) {
+//					
+//					toRemove[_class_].clear();
+//					for (ResCloudlet rcl : getCloudletWaitingList(_class_)) {
+//						
+//						if ((currentCpus - usedPes) >= rcl.getNumberOfPes()) {
+//							rcl.setCloudletStatus(Cloudlet.INEXEC);
+//							for (int k = 0; k < rcl.getNumberOfPes(); k++) {
+//								rcl.setMachineAndPeId(0, i);
+//							}
+//							getCloudletExecList(_class_).add(rcl);
+//							usedPes += rcl.getNumberOfPes();
+//							toRemove[_class_].add(rcl);
+//							break;
+//						}
+//					}
+//					getCloudletWaitingList(_class_).removeAll(toRemove[_class_]);
+//				}
 //			}
 //		}
+//		
 //
+//		// estimate finish time of cloudlets in the execution queue
+//		double nextEvent = Double.MAX_VALUE; // 아마 exe q 끝나는 시간 예측한 값
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+//				double remainingLength = rcl.getRemainingCloudletLength();
+//				double estimatedFinishTime = currentTime + (remainingLength / (capacity * rcl.getNumberOfPes()));
+//				if (estimatedFinishTime - currentTime < CloudSim.getMinTimeBetweenEvents()) {
+//					estimatedFinishTime = currentTime + CloudSim.getMinTimeBetweenEvents();
+//				}
+//				if (estimatedFinishTime < nextEvent) {
+//					nextEvent = nextEvent + estimatedFinishTime;
+//				}
+//			}
+//		}
+//		
 //		setPreviousTime(currentTime);
 //		return nextEvent;
 //	}
 //
-//	/**
-//	 * Gets the individual MIPS capacity available for each PE available for the scheduler,
-//         * considering that all PEs have the same capacity.
-//	 * 
-//	 * @param mipsShare list with MIPS share of each PE available to the scheduler
-//	 * @return the capacity of each PE
-//	 */
-//	protected double getCapacity(List<Double> mipsShare, ResCloudlet rcl) {
-//		int index = 0;
-//		
-//		for(int i = 0; i < taskMap.size(); i++) {
-//			if(taskMap.get(i).contains(rcl)) {
-//				index = i;
-//				break;
-//			}
-//		}
-//		
-//		return mipsShare.get(index)/taskMap.get(index).size();
-//	}
-//
 //	@Override
+//	// priority를 다루기 위해 for를 써도 되는가? -> cloudletID는 어차피 하나이기 때문에 이중for문 돌아도 문제가 없을것! 
+//	// cloudlet에 들어있는 태스크의 priority를 어케 찾지?
 //	public Cloudlet cloudletCancel(int cloudletId) {
 //		// First, looks in the finished queue
-//		for (ResCloudlet rcl : getCloudletFinishedList()) {
-//			if (rcl.getCloudletId() == cloudletId) {
-//				getCloudletFinishedList().remove(rcl);
-//				return rcl.getCloudlet();
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			for (ResCloudlet rcl : getCloudletFinishedList(_class_)) {
+//				if (rcl.getCloudletId() == cloudletId) {
+//					getCloudletFinishedList(_class_).remove(rcl);
+//					return rcl.getCloudlet();
+//				}
 //			}
 //		}
+//		
 //
 //		// Then searches in the exec list
-//		for (ResCloudlet rcl : getCloudletExecList()) {
-//			if (rcl.getCloudletId() == cloudletId) {
-//				getCloudletExecList().remove(rcl);
-//				if (rcl.getRemainingCloudletLength() == 0) {
-//					cloudletFinish(rcl);
-//				} else {
-//					rcl.setCloudletStatus(Cloudlet.CANCELED);
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+//				if (rcl.getCloudletId() == cloudletId) {
+//					getCloudletExecList(_class_).remove(rcl);
+//					if (rcl.getRemainingCloudletLength() == 0) {
+//						cloudletFinish(rcl);
+//					} else {
+//						rcl.setCloudletStatus(Cloudlet.CANCELED);
+//					}
+//					return rcl.getCloudlet();
 //				}
-//				return rcl.getCloudlet();
 //			}
 //		}
+//		
 //
 //		// Now, looks in the paused queue
-//		for (ResCloudlet rcl : getCloudletPausedList()) {
-//			if (rcl.getCloudletId() == cloudletId) {
-//				getCloudletPausedList().remove(rcl);
-//				return rcl.getCloudlet();
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			for (ResCloudlet rcl : getCloudletPausedList(_class_)) {
+//				if (rcl.getCloudletId() == cloudletId) {
+//					getCloudletPausedList(_class_).remove(rcl);
+//					return rcl.getCloudlet();
+//				}
 //			}
 //		}
+//		
 //
 //		// Finally, looks in the waiting list
-//		for (ResCloudlet rcl : getCloudletWaitingList()) {
-//			if (rcl.getCloudletId() == cloudletId) {
-//				rcl.setCloudletStatus(Cloudlet.CANCELED);
-//				getCloudletWaitingList().remove(rcl);
-//				return rcl.getCloudlet();
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			for (ResCloudlet rcl : getCloudletWaitingList(_class_)) {
+//				if (rcl.getCloudletId() == cloudletId) {
+//					rcl.setCloudletStatus(Cloudlet.CANCELED);
+//					getCloudletWaitingList(_class_).remove(rcl);
+//					return rcl.getCloudlet();
+//				}
 //			}
 //		}
+//		
 //
 //		return null;
+//
 //	}
 //
 //	@Override
 //	public boolean cloudletPause(int cloudletId) {
-//		boolean found = false;
-//		int position = 0;
+//		boolean[] found = {false,false,false};
+////		int position = 0;
+//		int[] position = {0,0,0};
 //
 //		// first, looks for the cloudlet in the exec list
-//		for (ResCloudlet rcl : getCloudletExecList()) {
-//			if (rcl.getCloudletId() == cloudletId) {
-//				found = true;
-//				break;
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			for (ResCloudlet rcl : getCloudletExecList(_class_)) {
+//				if (rcl.getCloudletId() == cloudletId) {
+//					found[_class_] = true;
+//					break;
+//				}
+//				position[_class_]++;
 //			}
-//			position++;
 //		}
+//		
 //
-//		if (found) {
-//			// moves to the paused list
-//			ResCloudlet rgl = getCloudletExecList().remove(position);
-//			if (rgl.getRemainingCloudletLength() == 0) {
-//				cloudletFinish(rgl);
-//			} else {
-//				rgl.setCloudletStatus(Cloudlet.PAUSED);
-//				getCloudletPausedList().add(rgl);
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			if (found[_class_]) {
+//				// moves to the paused list
+//				
+//				ResCloudlet rgl = getCloudletExecList(_class_).remove(position[_class_]);
+//				if (rgl.getRemainingCloudletLength() == 0) {
+//					cloudletFinish(rgl);
+//				} else {
+//					rgl.setCloudletStatus(Cloudlet.PAUSED);
+//					getCloudletPausedList(_class_).add(rgl);
+//				}
+//				return true;
 //			}
-//			return true;
-//
 //		}
+//		
 //
 //		// now, look for the cloudlet in the waiting list
-//		position = 0;
-//		found = false;
-//		for (ResCloudlet rcl : getCloudletWaitingList()) {
-//			if (rcl.getCloudletId() == cloudletId) {
-//				found = true;
-//				break;
-//			}
-//			position++;
+//		for(int i = 0; i<3; i++) {
+//			position[i] = 0;
+//			found[i] = false;
 //		}
-//
-//		if (found) {
-//			// moves to the paused list
-//			ResCloudlet rgl = getCloudletWaitingList().remove(position);
-//			if (rgl.getRemainingCloudletLength() == 0) {
-//				cloudletFinish(rgl);
-//			} else {
-//				rgl.setCloudletStatus(Cloudlet.PAUSED);
-//				getCloudletPausedList().add(rgl);
+//			
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			for (ResCloudlet rcl : getCloudletWaitingList(_class_)) {
+//				if (rcl.getCloudletId() == cloudletId) {
+//					found[_class_] = true;
+//					break;
+//				}
+//				position[_class_]++;
 //			}
-//			return true;
-//
+//		}
+//		
+//		for(int _class_ = 0; _class_<3; _class_++) {
+//			if (found[_class_]) {
+//				// moves to the paused list
+//				ResCloudlet rgl = getCloudletWaitingList(_class_).remove(position[_class_]);
+//				if (rgl.getRemainingCloudletLength() == 0) {
+//					cloudletFinish(rgl);
+//				} else {
+//					rgl.setCloudletStatus(Cloudlet.PAUSED);
+//					getCloudletPausedList(_class_).add(rgl);
+//				}
+//				return true;
+//			}
 //		}
 //
 //		return false;
 //	}
+//	
+//	
+//	
+//	public int findClass(ResCloudlet rcl) {
+//		int _class_ = 0;
+//		
+//		
+//		return _class_;
+//	}
 //
 //	@Override
 //	public void cloudletFinish(ResCloudlet rcl) {
+//		rcl.
 //		rcl.setCloudletStatus(Cloudlet.SUCCESS);
 //		rcl.finalizeCloudlet();
-//		
-//		// find cloudlet
-//		for(int i = 0; i < taskMap.size(); i++) {
-//			if(taskMap.contains(rcl)) {
-//				taskMap.remove(rcl);
-//			}
-//		}
-//		
 //		getCloudletFinishedList().add(rcl);
+//		usedPes -= rcl.getNumberOfPes();
 //	}
 //
 //	@Override
@@ -816,30 +850,9 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 //
 //		if (found) {
 //			ResCloudlet rcl = getCloudletPausedList().remove(position);
-//			Task_Custom tc = (Task_Custom)rcl.getCloudlet();
-//			List<Double> mipsShare = getCurrentMipsShare();
-//			
-//			double minUsage = Double.MAX_VALUE;
-//			for(ResCloudlet rc : taskMap.get(0)) {
-//				Task_Custom t = (Task_Custom)rc.getCloudlet();
-//				minUsage += t.getAllocatedReousrce();
-//			}
-//			int index = 0;
-//			for(int i = 1; i < taskMap.size(); i++) {
-//				double usage = 0;
-//				for(ResCloudlet rc : taskMap.get(index)) {
-//					Task_Custom t = (Task_Custom)rc.getCloudlet();
-//					usage += t.getAllocatedReousrce();
-//				}
-//				
-//				if(minUsage > usage) {
-//					minUsage = usage;
-//					index = i;
-//				}
-//			}
 //
 //			// it can go to the exec list
-//			if (mipsShare.get(index) - minUsage >= tc.getAllocatedReousrce()) {
+//			if ((currentCpus - usedPes) >= rcl.getNumberOfPes()) {
 //				rcl.setCloudletStatus(Cloudlet.INEXEC);
 //				for (int i = 0; i < rcl.getNumberOfPes(); i++) {
 //					rcl.setMachineAndPeId(0, i);
@@ -850,13 +863,23 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 //				rcl.getCloudlet().setCloudletLength(size);
 //
 //				getCloudletExecList().add(rcl);
-//				taskMap.get(index).add(rcl);
+//				usedPes += rcl.getNumberOfPes();
 //
 //				// calculate the expected time for cloudlet completion
+//				double capacity = 0.0;
+//				int cpus = 0;
+//				for (Double mips : getCurrentMipsShare()) {
+//					capacity += mips;
+//					if (mips > 0) {
+//						cpus++;
+//					}
+//				}
+//				currentCpus = cpus;
+//				capacity /= cpus;
 //
 //				long remainingLength = rcl.getRemainingCloudletLength();
 //				double estimatedFinishTime = CloudSim.clock()
-//						+ (remainingLength / (tc.getAllocatedReousrce() * rcl.getNumberOfPes()));
+//						+ (remainingLength / (capacity * rcl.getNumberOfPes()));
 //
 //				return estimatedFinishTime;
 //			} else {// no enough free PEs: go to the waiting queue
@@ -879,87 +902,42 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 //
 //	@Override
 //	public double cloudletSubmit(Cloudlet cloudlet, double fileTransferTime) {
-//		ResCloudlet rcl = new ResCloudlet(cloudlet);
-//		List<Double> mipsShare = getCurrentMipsShare();
-//		Task_Custom task = (Task_Custom)cloudlet;
-//		for (int i = 0; i < cloudlet.getNumberOfPes(); i++) {
-//			rcl.setMachineAndPeId(0, i);
+//		// it can go to the exec list
+//		if ((currentCpus - usedPes) >= cloudlet.getNumberOfPes()) {
+//			ResCloudlet rcl = new ResCloudlet(cloudlet);
+//			rcl.setCloudletStatus(Cloudlet.INEXEC);
+//			for (int i = 0; i < cloudlet.getNumberOfPes(); i++) {
+//				rcl.setMachineAndPeId(0, i);
+//			}
+//			getCloudletExecList().add(rcl);
+//			usedPes += cloudlet.getNumberOfPes();
+//		} else {// no enough free PEs: go to the waiting queue
+//			ResCloudlet rcl = new ResCloudlet(cloudlet);
+//			rcl.setCloudletStatus(Cloudlet.QUEUED);
+//			getCloudletWaitingList().add(rcl);
+//			return 0.0;
 //		}
-//		
-//		if(SimManager.getInstance().getOrchestratorPolicy().equals("PROPOSED")) {
-//			// calculate require resource
-//			double minUse = mipsShare.get(0);
-//			int index = 0;
-//			for(int i = 0; i < taskMap.size(); i++) {
-//				double usageMips = 0;
-//				for(ResCloudlet rc : taskMap.get(i)) {
-//					Task_Custom tc = (Task_Custom)rc.getCloudlet();
-//					usageMips+= tc.getAllocatedReousrce();
-//				}
-//				if(minUse > usageMips) {
-//					minUse = usageMips;
-//					index = i;
-//				}
-//			}
-//			
-//			double minRemainLength = 0;
-//			double minResource = 0;
-//			if(taskMap.get(index).size() > 0) {
-//				minRemainLength = Double.MAX_VALUE;
-//				for(ResCloudlet rc : taskMap.get(index)) {
-//					if(rc.getRemainingCloudletLength() < minRemainLength) {
-//						Task_Custom tc = (Task_Custom)rc.getCloudlet();
-//						minRemainLength = rc.getRemainingCloudletLength();
-//						minResource = tc.getAllocatedReousrce();
-//					}
-//				}
-//			}
-//			
-//			double remainTime = minResource == 0 ? 0 : minRemainLength/minResource;
-//			
-//			double availResource = mipsShare.get(0) - minUse;
-//			if((rcl.getCloudletLength() / (availResource)) <= (rcl.getCloudletLength()/(availResource + minResource) + (remainTime))) {
-//				getCloudletExecList().add(rcl);
-//				rcl.setCloudletStatus(Cloudlet.INEXEC);
-//				task.setAllocationResource(mipsShare.get(0) - minUse);
-//			}else {
-//				rcl.setCloudletStatus(Cloudlet.QUEUED);
-//				getCloudletWaitingList().add(rcl);
-//				return 0.0;
-//			}
-//		} else {
-//			double minUse = mipsShare.get(0);
-//			int index = 0;
-//			for(int i = 0; i < taskMap.size(); i++) {
-//				double usageMips = 0;
-//				for(ResCloudlet rc : taskMap.get(i)) {
-//					Task_Custom tc = (Task_Custom)rc.getCloudlet();
-//					usageMips += tc.getAllocatedReousrce();
-//				}
-//				if(minUse > usageMips) {
-//					minUse = usageMips;
-//					index = i;
-//				}
-//			}
-//			
-//			if(mipsShare.get(index) - minUse >= task.getAllocatedReousrce()) {
-//				getCloudletExecList().add(rcl);
-//				rcl.setCloudletStatus(Cloudlet.INEXEC);
-//				taskMap.get(index).add(rcl);
-//			}else {
-//				rcl.setCloudletStatus(Cloudlet.QUEUED);
-//				getCloudletWaitingList().add(rcl);
-//				return 0.0;
+//
+//		// calculate the expected time for cloudlet completion
+//		double capacity = 0.0;
+//		int cpus = 0;
+//		for (Double mips : getCurrentMipsShare()) {
+//			capacity += mips;
+//			if (mips > 0) {
+//				cpus++;
 //			}
 //		}
+//
+//		currentCpus = cpus;
+//		capacity /= cpus;
 //
 //		// use the current capacity to estimate the extra amount of
 //		// time to file transferring. It must be added to the cloudlet length
-//		double extraSize = getCapacity(getCurrentMipsShare(), rcl) * fileTransferTime;
-//		long length = (long) (cloudlet.getCloudletLength() + extraSize);
+//		double extraSize = capacity * fileTransferTime;
+//		long length = cloudlet.getCloudletLength();
+//		length += extraSize;
 //		cloudlet.setCloudletLength(length);
-//
-//		return cloudlet.getCloudletLength() / task.getAllocatedReousrce();
+//		return cloudlet.getCloudletLength() / capacity;
 //	}
 //
 //	@Override
@@ -974,18 +952,19 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 //				return rcl.getCloudletStatus();
 //			}
 //		}
-//		
+//
 //		for (ResCloudlet rcl : getCloudletPausedList()) {
 //			if (rcl.getCloudletId() == cloudletId) {
 //				return rcl.getCloudletStatus();
 //			}
 //		}
-//		
+//
 //		for (ResCloudlet rcl : getCloudletWaitingList()) {
 //			if (rcl.getCloudletId() == cloudletId) {
 //				return rcl.getCloudletStatus();
 //			}
 //		}
+//
 //		return -1;
 //	}
 //
@@ -1016,11 +995,22 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 //		return getCloudletExecList().size();
 //	}
 //
+//	/**
+//	 * Returns the first cloudlet to migrate to another VM.
+//	 * 
+//	 * @return the first running cloudlet
+//	 * @pre $none
+//	 * @post $none
+//         * 
+//         * @todo it doesn't check if the list is empty
+//	 */
 //	@Override
 //	public Cloudlet migrateCloudlet() {
-//		ResCloudlet rgl = getCloudletExecList().remove(0);
-//		rgl.finalizeCloudlet();
-//		return rgl.getCloudlet();
+//		ResCloudlet rcl = getCloudletExecList().remove(0);
+//		rcl.finalizeCloudlet();
+//		Cloudlet cl = rcl.getCloudlet();
+//		usedPes -= cl.getNumberOfPes();
+//		return cl;
 //	}
 //
 //	@Override
@@ -1036,38 +1026,51 @@ public class EdgeScheduler_Custom extends CloudletScheduler_Custom {
 //
 //	@Override
 //	public double getTotalCurrentAvailableMipsForCloudlet(ResCloudlet rcl, List<Double> mipsShare) {
-//            /*@todo It isn't being used any the the given parameters.*/
-//            return getCapacity(getCurrentMipsShare(), rcl);
+//                /*@todo The param rcl is not being used.*/
+//		double capacity = 0.0;
+//		int cpus = 0;
+//		for (Double mips : mipsShare) { // count the cpus available to the vmm
+//			capacity += mips;
+//			if (mips > 0) {
+//				cpus++;
+//			}
+//		}
+//		currentCpus = cpus;
+//		capacity /= cpus; // average capacity of each cpu
+//		return capacity;
 //	}
 //
 //	@Override
-//	public double getTotalCurrentAllocatedMipsForCloudlet(ResCloudlet rcl, double time) {
-//                //@todo The method is not implemented, in fact
+//	public double getTotalCurrentAllocatedMipsForCloudlet(ResCloudlet rcl, double time) {   
+//                //@todo the method isn't in fact implemented
+//		// TODO Auto-generated method stub
 //		return 0.0;
 //	}
 //
 //	@Override
 //	public double getTotalCurrentRequestedMipsForCloudlet(ResCloudlet rcl, double time) {
-//                //@todo The method is not implemented, in fact
+//                //@todo the method isn't in fact implemented
 //		// TODO Auto-generated method stub
 //		return 0.0;
 //	}
 //
 //	@Override
 //	public double getCurrentRequestedUtilizationOfRam() {
-//		double ram = 0;
-//		for (ResCloudlet cloudlet : cloudletExecList) {
-//			ram += cloudlet.getCloudlet().getUtilizationOfRam(CloudSim.clock());
-//		}
-//		return ram;
+//                //@todo the method isn't in fact implemented
+//		// TODO Auto-generated method stub
+//		return 0;
 //	}
 //
 //	@Override
 //	public double getCurrentRequestedUtilizationOfBw() {
-//		double bw = 0;
-//		for (ResCloudlet cloudlet : cloudletExecList) {
-//			bw += cloudlet.getCloudlet().getUtilizationOfBw(CloudSim.clock());
-//		}
-//		return bw;
+//                //@todo the method isn't in fact implemented
+//		// TODO Auto-generated method stub
+//		return 0;
 //	}
+	
+
+////////////////////////////////////////////////////////////////////////////////	
+	
+	
+
 }
