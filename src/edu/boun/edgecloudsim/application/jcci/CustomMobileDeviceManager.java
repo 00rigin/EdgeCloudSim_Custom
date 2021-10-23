@@ -46,7 +46,7 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 	//20211016 HJ Made some var for timeslot
 	private ArrayList<Task_Custom> taskQueue = new ArrayList<Task_Custom>();
 	private double timeSlotStartTime = 0;
-	private double timeSlotThresh = 0.2;
+	private double timeSlotThresh = 0.3;
 	// 20211019 HJ Made for EWMA
 	private double[] EWMA = {0,0}; // Store the first and second divider with First class's max and Second class's max
 	private double alpha = 0.5;
@@ -145,6 +145,17 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 	
 	// 20211016 HJ priority 
 	// Sort the task by processing trhoughput
+	private ArrayList<Task_Custom> setPriorityOne(){
+		ArrayList<Task_Custom> PritizedTasks = new ArrayList<Task_Custom>();
+		for(int i = 0; i<taskQueue.size(); i++) {
+			taskQueue.get(i).setPriority(0);
+			PritizedTasks.add(taskQueue.get(i));
+		}
+		
+		return PritizedTasks;
+		
+	}
+	
 	private ArrayList<Task_Custom> setPriority() {
 		
 //		System.out.print("# of Tasks : ");
@@ -154,7 +165,7 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 		
 		for(int i = 0; i<taskQueue.size(); i++) { // Priority 
 			long _size = taskQueue.get(i).getTaskSize();
-			long _deadline = taskQueue.get(i).getTaskDeadline();
+			double _deadline = taskQueue.get(i).getTaskDeadline();
 			if(_deadline <= 0)
 				_deadline = 1;
 			double _throughput = (double)_size/(double)_deadline;
@@ -189,11 +200,11 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 		// Set Priority
 		for(int i = 0; i<throughput.size(); i++) {
 			if(throughput.get(i)<=EWMA[0])
-				PritizedTasks.get(i).setPriority(1);
+				PritizedTasks.get(i).setPriority(0);
 			else if (throughput.get(i)>EWMA[1])
-				PritizedTasks.get(i).setPriority(3);
-			else
 				PritizedTasks.get(i).setPriority(2);
+			else
+				PritizedTasks.get(i).setPriority(1);
 		}
 		
 
@@ -252,8 +263,15 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 			taskQueue.add(_task);
 		}
 		else { // larger than time th
+			ArrayList<Task_Custom> PritizedTasks = new ArrayList<Task_Custom>();
 //			SimLogger.printLine("Task : " + taskQueue);
-			ArrayList<Task_Custom> PritizedTasks = setPriority(); // prioritized Tasks.
+			if(SimManager.getInstance().getOrchestratorPolicy().equals("PROPOSED")) {
+				PritizedTasks = setPriority(); // prioritized Tasks.
+			}
+			else {
+				PritizedTasks = setPriorityOne();
+			}
+			
 			taskQueue.clear(); //init the Q
 			
 //			// Check Priority of tasks
@@ -263,10 +281,14 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 			
 			
 			for(int i = 0; i<PritizedTasks.size(); i++) {
+				Vm selectedVM = null;
+						
 				Task_Custom task = PritizedTasks.get(i);
 				
 				//original code
 				int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task); 
+				// 20211024 HJ
+				
 				
 //				System.out.println("nextHopId : " + nextHopId);
 				
@@ -276,7 +298,9 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 				nextEvent = REQUEST_RECEIVED_BY_EDGE_DEVICE;
 				nextDeviceForNetworkModel = SimSettings.EDGE_ORCHESTRATOR_ID;
 				
-				Vm selectedVM = SimManager.getInstance().getEdgeOrchestrator().getVmToOffload(task, nextHopId);
+				selectedVM = SimManager.getInstance().getEdgeOrchestrator().getVmToOffload(task, nextHopId);
+				
+				
 				
 				if(selectedVM != null) {
 					task.setAssociatedDatacenterId(nextHopId);

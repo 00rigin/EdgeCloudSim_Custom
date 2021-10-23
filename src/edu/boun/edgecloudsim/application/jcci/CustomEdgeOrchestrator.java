@@ -22,12 +22,15 @@ import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
+import edu.boun.edgecloudsim.application.jcci.CustomNetworkModel;
 
 public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 	
 	private int numberOfHost;
 	private double varThresh;
-	private int startFlag;
+	private int startFlag = 0;
+	private boolean flg = false;
+	public int resChecker[] = {0,0,0,0,0,0,0,0,0,0};
 	
 	
 	public CustomEdgeOrchestrator(String _policy, String _simScenario) {
@@ -53,559 +56,92 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 		Location sourcePointLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(), CloudSim.clock());
 		double edgeUtilization = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(sourcePointLocation.getServingWlanId());
 		
+		
 		// 20211013 HJ for KSC
 		if(policy.equals("PROPOSED")) {
 			
-			List<EdgeVM> localVM = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); // vm list : 현재는 1개
+//			List<EdgeVM> localVM = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); // vm list : 현재는 1개
+			
 			double localUsage = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(sourcePointLocation.getServingWlanId()); // 현재 엣지서버의 유틸라이제이션
-			result = sourcePointLocation.getServingWlanId(); // 협업 대상 초기화 (현재 엣지서버 아이디)
-			
-//			ArrayList<Integer> edge = new ArrayList<>(Arrays.asList(0,1,2,3,4,5,6,7,8,9)); // NUMBER OF EDGE SERVER
-//			int numofEdge = edge.size();
-//			
-//			//dummy task to simulate a task with 1 Mbit file size to upload and download 
-//			Task_Custom dummyTask = new Task_Custom(0, 0, 0, 0, 128, 128, new UtilizationModelFull(), new UtilizationModelFull(), new UtilizationModelFull(), 0);
-//			int processingThroughput = 0;
-//			
-//			for(int i = 0; i<numofEdge; i++) { 
-//				// Transmission delay
-//				double wanDelay = SimManager.getInstance().getNetworkModel().getUploadDelay(task.getMobileDeviceId(),
-//						i, dummyTask /* 1 Mbit */);
-//				// TaskDeadline
-//				long deadline = task.getTaskDeadline();
-//				
-//				
-//			}
-			
-			
-			
-			
-			
-			
-			////////////////////////RANDOM NEIGHBOR////////////////////////////
-
-			
-//			System.out.println(localVM.size());
-			
-			
-			 
-			
-			
-			int[] nei1 = {1,2,3};
-			int[] nei2 = {1,2,4,5};
-			int[] nei3 = {1,3,4,7,8};
-			int[] nei4 = {2,3,4,6,9};
-			int[] nei5 = {2,5,6,8,10};
-			int[] nei6 = {1,4,5,6,7};
-			int[] nei7 = {3,6,7,9,10};
-			int[] nei8 = {3,5,8,10};
-			int[] nei9 = {4,7,9};
-			int[] nei10 = {5,7,8,10};
-			
-		
-			ArrayList<int[]> neimaps = new ArrayList<int[]>();
-			neimaps.add(nei1);
-			neimaps.add(nei2);
-			neimaps.add(nei3);
-			neimaps.add(nei4);
-			neimaps.add(nei5);
-			neimaps.add(nei6);
-			neimaps.add(nei7);
-			neimaps.add(nei8);
-			neimaps.add(nei9);
-			neimaps.add(nei10);
-			
-			int[] curnei = neimaps.get(result); 
-			task.setAllocationResource((int)localVM.get(0).getMips()); 
-			int randomIndex = SimUtils.getRandomNumber(0, curnei.length-1);
-			result = curnei[randomIndex]-1;
-			//////////////////////////////////////////////////////////////////////////////
-			
-			
-			
-//			
-//			SimLogger.printLine("Task : " + task.getMobileDeviceId());
-			
-			
-//			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); 
-//			List<ResCloudlet> exeList= vmArray.get(0).getCloudletScheduler().getCloudletExecList(); 
-//			List<Double> mipsShare = vmArray.get(0).getCloudletScheduler().getCurrentMipsShare();
-//			
-//			NetworkModel networkModel = SimManager.getInstance().getNetworkModel();	
-//			
-//			task.setAllocationResource(vmArray.get(0).getMips());
-//			
-//			SimLogger.printLine("Task Size : " + task.getTaskSize());
-//			SimLogger.printLine("Task Deadline : " + task.getTaskDeadline());
-//			SimLogger.printLine("Task Throughput : " + (double)task.getTaskSize()/(double)task.getTaskDeadline());
-			
-//			SimLogger.printLine("CloudSim.clock() : " + CloudSim.clock());
-		
-			
-//			SimLogger.printLine("VMArray : "+vmArray);
-//			SimLogger.printLine("exeArray : "+exeList);
-//			SimLogger.printLine("mipsShare : "+mipsShare);
-//			
-//			for (int i = 0; i<vmArray.size(); i++) {
-//				SimLogger.printLine("vmArray data :  : "+vmArray.get(0));
-//			}
-			
-			
-			
-			
-			
-			
-			
-			
-			
-		}
-		
-
-		// 20210301 for kcc
-		else if(policy.equals("CONV") || policy.equals("PROPOSED_WO_RA")) {
-			//resource prediction
-			//deadline : 500ms
-			double requiredResource = task.getCloudletLength()/0.5;
-			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
-			
-			List<ResCloudlet> exeList= vmArray.get(0).getCloudletScheduler().getCloudletExecList();
-			List<Double> mipsShare = vmArray.get(0).getCloudletScheduler().getCurrentMipsShare();
-			double usage = 0;
-			double mips = 0;
-			for(ResCloudlet rc : exeList) { ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				Task_Custom tc = (Task_Custom)rc.getCloudlet();
-				usage += tc.getAllocatedReousrce();
-			}
-			for(double m : mipsShare) {
-				mips += m;
-			}
-			double utilizationByTask = ((requiredResource+usage)/(mips))*100;
-			
-			if(utilizationByTask < 70) {
-				//offloading
-				task.setAllocationResource(requiredResource); // (requiredResource) 
-				result = sourcePointLocation.getServingWlanId(); // ES ID
-			}else {
-				double randomValue = SimUtils.getRandomDoubleNumber(0.0, 1.0);
-				List<ResCloudlet> execList = vmArray.get(0).getCloudletScheduler().getCloudletExecList();
-				List<ResCloudlet> waitingList = vmArray.get(0).getCloudletScheduler().getCloudletWaitingList();
-				List<ResCloudlet> finishList = vmArray.get(0).getCloudletScheduler().getCloudletFinishedList();
-				long minRemainingLength = Long.MAX_VALUE;
-				
-				for(ResCloudlet rc : execList) {
-					if(rc.getRemainingCloudletLength() < minRemainingLength) {
-						minRemainingLength = rc.getRemainingCloudletLength(); ///////////////////////////////////////////////////////////////////
-					}
-				}
-				
-				double timeValue = minRemainingLength/0.5; // deadline : 500ms
-				double offloadingProb = Math.cbrt((utilizationByTask/mips)*timeValue/100);
-				
-				if(randomValue < offloadingProb) {
-					task.setAllocationResource(requiredResource);
-					result = sourcePointLocation.getServingWlanId();
-				}else {
-					
-					ArrayList<Integer> edge = new ArrayList<>(Arrays.asList(0,1,2,3,4,5,6,7,8,9));
-					int collaborationTarget = Integer.MAX_VALUE;
-					double localDelay = 0;
-					double resource = 0;
-					
-					if(waitingList.size() > 0) {
-						double avgResource = usage/execList.size();
-						
-						localDelay += task.getCloudletLength() / avgResource;
-						// queueing delay
-						if(waitingList.size() > execList.size()) {
-							for(int i = 0; i < execList.size(); i++) {
-								Task_Custom t = (Task_Custom)execList.get(i).getCloudlet();
-								localDelay += (execList.get(i).getRemainingCloudletLength() / t.getAllocatedReousrce());
-							}
-							
-							for(int i = 0; i < waitingList.size(); i++) {
-								Task_Custom t = (Task_Custom)waitingList.get(i).getCloudlet();
-								localDelay += (waitingList.get(i).getRemainingCloudletLength() / t.getAllocatedReousrce());
-							}
-						}else {
-							for(int k = 0; k < waitingList.size(); k++) {
-								Task_Custom t = (Task_Custom)execList.get(k).getCloudlet();
-								localDelay += (execList.get(k).getRemainingCloudletLength() / t.getAllocatedReousrce());
-							}
-						}
-					}else {
-						localDelay += (task.getCloudletLength() / (vmArray.get(0).getMips()-usage));
-					}
-					
-					edge = sortingByUtilization(edge);
-					
-					for(int i = 0; i < edge.size(); i++) {
-						List<EdgeVM> edgeVmList = SimManager.getInstance().getEdgeServerManager().getVmList(i);
-						List<Double> eMips = edgeVmList.get(0).getCloudletScheduler().getCurrentMipsShare();
-						List<ResCloudlet> execList_e = edgeVmList.get(0).getCloudletScheduler().getCloudletExecList();
-						List<ResCloudlet> waitingList_e = edgeVmList.get(0).getCloudletScheduler().getCloudletWaitingList();
-//						List<ResCloudlet> finishList_e = edgeVmList.get(0).getCloudletScheduler().getCloudletFinishedList();
-						
-						double mipsUs = 0;
-						for(double d : eMips) {
-							mipsUs += d;
-						}
-						// compute delay
-						double communicationDelay = 0;
-						double bufferDelay = 0;
-						double computationDelay = 0;
-						
-						//
-						double avgResource = mipsUs/execList_e.size();
-						
-						// communication delay
-						if(task.getMobileDeviceId() != i) {
-							communicationDelay = (task.getCloudletLength() * 8) / 900000000; // 90Mbps
-						}
-						
-						// computation delay
-						if(waitingList.size() > 0) {
-							computationDelay = task.getCloudletLength() / avgResource;
-							resource = avgResource;
-						}else {
-							computationDelay = task.getCloudletLength() / (edgeVmList.get(0).getMips() - mipsUs);
-							resource = edgeVmList.get(0).getMips() - mipsUs;
-						}
-						
-						// buffer delay
-						if(edgeVmList.get(0).getMips() - mipsUs < task.getCloudletLength() / 2) {
-							if(waitingList_e.size() > execList_e.size()) {
-								for(int j = 0; j < execList_e.size(); j++) {
-									bufferDelay += (execList_e.get(j).getRemainingCloudletLength() / eMips.get(0));
-								}
-								for(int j = 0; j < waitingList_e.size(); j++) {
-									Task_Custom t = (Task_Custom)waitingList_e.get(j).getCloudlet();
-									bufferDelay += (waitingList_e.get(j).getCloudletLength() / t.getAllocatedReousrce());
-								}
-							}else {
-								for(int j = 0; j < waitingList_e.size(); j++) {
-									bufferDelay += (execList_e.get(j).getRemainingCloudletLength() / eMips.get(0));
-								}
-							}
-						}
-						
-						double computationThreshold = (task.getCloudletLength() / (0.5 - communicationDelay - bufferDelay));
-						// greedy algorithm
-						if(edgeVmList.get(0).getMips() - mipsUs > computationThreshold) {
-							task.setAllocationResource(resource);
-							collaborationTarget = i;
-							return collaborationTarget;
-						}else if(avgResource > computationThreshold){
-							task.setAllocationResource(resource);
-							collaborationTarget = i;
-							return collaborationTarget;
-						}
-					}
-					
-					edge = sortByBuffer(edge);
-					int numTask = (int) ((vmArray.get(0).getMips() * 0.5)/task.getCloudletLength());
-					double totalFinishTime = 0;
-					double total = 0;
-					ArrayList<Double> completionTime = new ArrayList<Double>();
-					
-					for(int i = finishList.size() - 1; i > numTask; i--) { // 
-						completionTime.add(finishList.get(i).getClouddletFinishTime() - finishList.get(i).getCloudletArrivalTime());
-						totalFinishTime += finishList.get(i).getClouddletFinishTime() - finishList.get(i).getCloudletArrivalTime();
-					}
-					
-					totalFinishTime = totalFinishTime / finishList.size();
-					
-					for(int i = 0; i < completionTime.size(); i++) {
-						total += Math.pow(completionTime.get(i) - totalFinishTime, 2);
-					}
-					
-					double sDelay = 0.5 * (1 + Math.cbrt(total));
-					
-					for(int i=0; i < edge.size(); i++) {
-						List<EdgeVM> edgeVmList = SimManager.getInstance().getEdgeServerManager().getVmList(i);
-						List<Double> eMips = edgeVmList.get(0).getCloudletScheduler().getCurrentMipsShare();
-						List<ResCloudlet> execList_e = edgeVmList.get(0).getCloudletScheduler().getCloudletExecList();
-						List<ResCloudlet> waitingList_e = edgeVmList.get(0).getCloudletScheduler().getCloudletWaitingList();
-						
-						double mipsUs = 0;
-						for(double d : eMips) {
-							mipsUs += d;
-						}
-						// compute delay
-						double communicationDelay = 0;
-						double bufferDelay = 0;
-						double computationDelay = 0;
-						
-						//
-						double avgResource = mipsUs/execList_e.size();
-						
-						// communication delay
-						if(task.getMobileDeviceId() != i) {
-							communicationDelay = (task.getCloudletLength() * 8) / 900000000;
-						}
-						
-						// computation delay
-						if(waitingList.size() > 0) {
-							computationDelay = task.getCloudletLength() / avgResource;
-							resource = avgResource;
-						}else {
-							computationDelay = task.getCloudletLength() / (edgeVmList.get(0).getMips() - mipsUs);
-							resource = edgeVmList.get(0).getMips() - mipsUs;
-						}
-						
-						// buffer delay
-						if(edgeVmList.get(0).getMips() - mipsUs < task.getCloudletLength() / 2) {
-							if(waitingList_e.size() > execList_e.size()) {
-								for(int j = 0; j < execList_e.size(); j++) {
-									bufferDelay += (execList_e.get(j).getRemainingCloudletLength() / eMips.get(j));
-								}
-								for(int j = 0; j < waitingList_e.size(); j++) {
-									Task_Custom t = (Task_Custom)waitingList_e.get(j).getCloudlet();
-									bufferDelay += (waitingList_e.get(j).getCloudletLength() / t.getAllocatedReousrce());
-								}
-							}else {
-								for(int j = 0; j < waitingList_e.size(); j++) {
-									bufferDelay += (execList_e.get(j).getRemainingCloudletLength() / eMips.get(j));
-								}
-							}
-						}
-						
-						if(communicationDelay + bufferDelay + computationDelay < sDelay) {
-							collaborationTarget = i;
-							task.setAllocationResource(resource);
-						}else {
-							if(communicationDelay + bufferDelay + computationDelay > localDelay) {
-								task.setAllocationResource(usage/execList.size());
-								collaborationTarget = sourcePointLocation.getServingWlanId();
-							}
-						}
-					}
-					SimLogger.printLine("############Task list : " + LoadGeneratorModel.getTaskList());
-					result = collaborationTarget;
-				}
-			}
-		}
-		else if(policy.equals("UTILIZATION_BASED")) { // least loaded
-			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
-			List<ResCloudlet> exeList= vmArray.get(0).getCloudletScheduler().getCloudletExecList();
-			List<Double> mipsShare = vmArray.get(0).getCloudletScheduler().getCurrentMipsShare();
-			double usage = 0;
-			double mips = 0;
-			for(ResCloudlet rc : exeList) {
-				Task_Custom tc = (Task_Custom)rc.getCloudlet();
-				usage += tc.getAllocatedReousrce();
-			}
-			for(double m : mipsShare) {
-				mips += m;
-			}
-			
-			double minUtilization = usage / mips;
-			int minIndex = sourcePointLocation.getServingWlanId();
-			
-			for(int i = 0; i < SimManager.getInstance().getEdgeServerManager().getDatacenterList().size(); i++) {
-				List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(i);
-				List<ResCloudlet> eList = vmList.get(0).getCloudletScheduler().getCloudletExecList();
-				double u = 0;
-				double mip = 0;
-				for(ResCloudlet rc : eList) {
-					Task_Custom tc = (Task_Custom)rc.getCloudlet();
-					u += tc.getAllocatedReousrce();
-				}
-				for(double m : mipsShare) {
-					mip += m;
-				}
-				
-				double eUtilization = u / mip;
-				
-				if(eUtilization < minUtilization) {
-					minUtilization = eUtilization;
-					minIndex = i;
-				}
-			}
-			
-			task.setAllocationResource(vmArray.get(0).getMips()); // 
-			result = minIndex;
-		}
-		
-		else if(policy.equals("DELAY_BASED")) { // delay based
-			
-			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
-			List<ResCloudlet> exeList= vmArray.get(0).getCloudletScheduler().getCloudletExecList(); 
-			List<Double> mipsShare = vmArray.get(0).getCloudletScheduler().getCurrentMipsShare();
-			
-			
 			NetworkModel networkModel = SimManager.getInstance().getNetworkModel();	
+			result = 0; // 협업 대상 초기화 (현재 엣지서버 아이디)
+			
+			ArrayList<Integer> edge = new ArrayList<>(Arrays.asList(0,1,2,3,4,5,6,7,8,9)); // NUMBER OF EDGE SERVER
+			int numofEdge = edge.size();
+			
+			//dummy task to simulate a task with 1 Mbit file size to upload and download 
+			Task_Custom dummyTask = new Task_Custom(0, 0, 0, 0, 128, 128, new UtilizationModelFull(), new UtilizationModelFull(), new UtilizationModelFull(), 0);
+			
+			// TaskSize
+			long taskSize = task.getTaskSize();
+			// TaskDeadline
+			double deadline = task.getTaskDeadline();
 			
 			
-			double avgutils = SimManager.getInstance().getEdgeServerManager().getAvgUtilization(); 
-			double var = 0;
-			
-			
-			for(int i = 0; i<10; i++) {
-				double tem=0;
-				double curEdgeUtil = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(i);
-				tem = (curEdgeUtil - avgutils)*(curEdgeUtil - avgutils);
-				var+=tem;
-			}
-			var = var/10; // variation
-			
-			
-			
-			
-			if(var<varThresh) {//////////////////////////////////////////////////////////////////////////////////// delay based operation			
+			for(int i = 0; i < edge.size(); i++) {
+				List<EdgeVM> edgeVmList = SimManager.getInstance().getEdgeServerManager().getVmList(i);
+				List<Double> eMips = edgeVmList.get(0).getCloudletScheduler().getCurrentMipsShare();
+				List<ResCloudlet> execList_e = edgeVmList.get(0).getCloudletScheduler().getCloudletExecList();
+				List<List<ResCloudlet>> waitingList_e = edgeVmList.get(0).getWaitingList();
 				
+				double processingThroughput = 0;
 				
+				double _max_ = 0;
 				
+				double Qdelay = 0;
 				
-				
-				
-				//System.out.println("11111111111111111 ");
 				double communicationDelay = 0;
-				double computationDelay = 0;
-				int currentEdge = sourcePointLocation.getServingWlanId();
-				double minDiff = Double.MAX_VALUE;
-				int minIndex = 0;
-		
-				for(int i = 0; i<10; i++) {
-					
 
-					List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(i); 
-					List<ResCloudlet> eList = vmList.get(0).getCloudletScheduler().getCloudletExecList(); 
-					Long[] remainLet = new Long[10];
-					/*
-					ArrayList<Long> remainLet = new ArrayList<Long>();
-					*/
-					for(int j = 0; j<10; j++) {
-						remainLet[j]=(long)0; 
-					}
-					
-					for(ResCloudlet rc : eList) {
-						if(rc.getRemainingCloudletLength()!=0) {
-							remainLet[i] = rc.getRemainingCloudletLength();//
-						}
-						 //System.out.println("RL : "+rc.getRemainingCloudletLength());
-					}
-					
-					if(i!=currentEdge) {
-						
-						double currentEdgeUtil = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(i); // current edge server utilization
-						communicationDelay = networkModel.getUploadDelay(task.getMobileDeviceId(), i, task); 
-						
-						//System.out.println("arraylen : "+remainLet.size());
-						
-						computationDelay = remainLet[i]  / currentEdgeUtil;
-						//computationDelay = 0;
-						
-						double diff=Double.MAX_VALUE;
-						if(communicationDelay-computationDelay > 0) {
-							diff = Math.abs(communicationDelay-computationDelay);
-						}
-						
-						if(minDiff>diff) {
-							minDiff = diff;
-							minIndex = i;
+				//Buffer delay
+				for(int j = 0; j<execList_e.size(); j++) 
+					Qdelay += (execList_e.get(j).getRemainingCloudletLength() / eMips.get(0));
+				
+				
+				int taskPri = task.getTaskPriority();
+				
+				// 태스크 자신의 상위 클래스 + 자신의 클래스에 대한 큐잉 딜레이
+				for(int j = 0; j<taskPri; j++) {
+					try {
+						for(int k = 0; k<waitingList_e.get(j).size(); k++) {
+							Task_Custom t = (Task_Custom)waitingList_e.get(i).get(j).getCloudlet();
+							Qdelay += (waitingList_e.get(j).get(k).getCloudletLength() / t.getAllocatedReousrce());
 						}
 					}
-				}
-				task.setAllocationResource(vmArray.get(0).getMips());
-				result = minIndex;
-			}
-			else {//resource based operation
-			
-				double usage = 0;
-				double mips = 0;
-				for(ResCloudlet rc : exeList) {
-					Task_Custom tc = (Task_Custom)rc.getCloudlet();
-					usage += tc.getAllocatedReousrce();
-				}
-				for(double m : mipsShare) {
-					mips += m;
+					catch(IndexOutOfBoundsException e) {
+						Qdelay += 0;
+					}
 				}
 				
-				double minUtilization = usage / mips;
-				int minIndex = sourcePointLocation.getServingWlanId();
+//				System.out.println(Qdelay);
+				 // Transmission delay
+				communicationDelay = networkModel.getUploadDelay(task.getMobileDeviceId(), i, dummyTask);
 				
-				for(int i = 0; i < SimManager.getInstance().getEdgeServerManager().getDatacenterList().size(); i++) {
-					List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(i);
-					List<ResCloudlet> eList = vmList.get(0).getCloudletScheduler().getCloudletExecList();
-					double u = 0;
-					double mip = 0;
-					for(ResCloudlet rc : eList) {
-						Task_Custom tc = (Task_Custom)rc.getCloudlet();
-						u += tc.getAllocatedReousrce();
-					}
-					for(double m : mipsShare) {
-						mip += m;
-					}
-					
-					double eUtilization = u / mip;
-					
-					if(eUtilization < minUtilization) {
-						minUtilization = eUtilization;
-						minIndex = i;
-					}
+				processingThroughput = (double)taskSize*0.1 /(deadline - 10*Qdelay - 10*communicationDelay);
+				
+//				if(startFlag>200 && startFlag<300) {
+//				
+//					System.out.println("wnaDelay : "+ communicationDelay + " | qTime : "+Qdelay+" | taskSize : "+taskSize+" | deadline : "+deadline+" | PT : "+processingThroughput+" | result : "+result);
+//					
+//				}
+
+				if(processingThroughput > _max_ && processingThroughput>0) {
+					processingThroughput = _max_;
+					result = i;
 				}
-				startFlag = 0;
-				task.setAllocationResource(vmArray.get(0).getMips());
-				result = minIndex;
 			}
 			
+//			resChecker[result]++;
+//			
+//			if(startFlag > 1000) {
+//				for(int i = 0; i<10; i++) {
+//					System.out.print(resChecker[i] + " ");
+//				}
+//				System.out.println();
+//			}
+//
+			startFlag++;
 
 		}
-		
-		
-		
-		//else if(policy.equals("LOCALITY_BASE")) {
-		else if(policy.equals("RANDOM_NEIGHBOR")) {
-			List<EdgeVM> localVM = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
-			double localUsage = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(sourcePointLocation.getServingWlanId());
-			result = sourcePointLocation.getServingWlanId(); 
-			
-			
-			int[] nei1 = {1,2,3};
-			int[] nei2 = {1,2,4,5};
-			int[] nei3 = {1,3,4,7,8};
-			int[] nei4 = {2,3,4,6,9};
-			int[] nei5 = {2,5,6,8,10};
-			int[] nei6 = {1,4,5,6,7};
-			int[] nei7 = {3,6,7,9,10};
-			int[] nei8 = {3,5,8,10};
-			int[] nei9 = {4,7,9};
-			int[] nei10 = {5,7,8,10};
-			
-		
-			ArrayList<int[]> neimaps = new ArrayList<int[]>();
-			neimaps.add(nei1);
-			neimaps.add(nei2);
-			neimaps.add(nei3);
-			neimaps.add(nei4);
-			neimaps.add(nei5);
-			neimaps.add(nei6);
-			neimaps.add(nei7);
-			neimaps.add(nei8);
-			neimaps.add(nei9);
-			neimaps.add(nei10);
-			
-			int[] curnei = neimaps.get(result); 
-			task.setAllocationResource((int)localVM.get(0).getMips()); 
-			int randomIndex = SimUtils.getRandomNumber(0, curnei.length-1);
-			result = curnei[randomIndex]-1;
-			/*
-			if(localUsage < 100) { 
-				task.setAllocationResource((int)localVM.get(0).getMips()); 
-				result = sourcePointLocation.getServingWlanId(); 
-			}
-			else { 
-				
-				int[] curnei = neimaps.get(result); 
-				task.setAllocationResource((int)localVM.get(0).getMips()); 
-				int randomIndex = SimUtils.getRandomNumber(0, curnei.length-1);
-				result = curnei[randomIndex]-1;
-			}	
-			*/
-
-		}	
-		
-		
 		
 		else if(policy.equals("LOCAL")) {
 			List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
@@ -617,10 +153,12 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 		
 		else if(policy.equals("RANDOM")) {
 			
+
 			List<EdgeVM> vmList = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId());
 			task.setAllocationResource(vmList.get(0).getMips());
 			result = SimUtils.getRandomNumber(0, 9);
-			//SimLogger.printLine("Random Edge ID :"+ result);
+			
+
 		}
 		
 		
@@ -678,7 +216,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 			System.exit(0);
 		}
 		
-		System.out.println("Edge index : " + edgeId);
+//		System.out.println("Edge index : " + edgeId);
 		
 		return selectedVM;
 	}

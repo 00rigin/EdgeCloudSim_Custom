@@ -55,7 +55,7 @@ public class CustomNetworkModel extends NetworkModel{
 		Location sourcePointLocation = SimManager.getInstance().getMobilityModel().getLocation(sourceDeviceId, CloudSim.clock());
 		int sourceId = sourcePointLocation.getServingWlanId();
 		
-//		System.out.println("destDeviceId: " + destDeviceId + "sourceId: " + sourceId);
+		
 		
 		if(destDeviceId == sourceId) {
 			return delay;
