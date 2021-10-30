@@ -185,7 +185,8 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 				task.getTaskType(),
 				(int)task.getCloudletLength(),
 				(int)task.getCloudletFileSize(),
-				(int)task.getCloudletOutputSize());
+				(int)task.getCloudletOutputSize(),
+				task.getTaskDeadline());
 
 		int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task);
 		

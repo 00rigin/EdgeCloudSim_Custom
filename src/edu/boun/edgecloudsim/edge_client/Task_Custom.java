@@ -52,7 +52,7 @@ public class Task_Custom extends Cloudlet {
 	}
 	
 	public void setDeadline(double _deadline) {
-		deadline = _deadline;
+		deadline = _deadline*0.01;
 	}
 	
 	public void setPriority(int _class_) {

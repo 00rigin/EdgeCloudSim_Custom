@@ -235,25 +235,26 @@ public class SimManager extends SimEntity {
 				
 				schedule(getId(), SimSettings.getInstance().getVmLoadLogInterval(), GET_LOAD_LOG);
 				break;
-			case PRINT_PROGRESS:   ////////////////////////// ¾È¿¡
+			case PRINT_PROGRESS:   ////////////////////////// ï¿½È¿ï¿½
 				int progress = (int)((CloudSim.clock()*100)/SimSettings.getInstance().getSimulationTime());
 				
-				//// °¢ ¿§ÁöÀÇ À¯Æ¿¶óÀÌÁ¦ÀÌ¼Ç ÇÁ¸°Æ®-> ½É¼¼ÆÃ
+				//// ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¼ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®-> ï¿½É¼ï¿½ï¿½ï¿½
 				
 				/////////////////////////////////////////////////////////
 			
 				
 				if(progress % 10 == 0) {
 					
-					double edgeAvgUtil = edgeServerManager.getAvgUtilization();
-					double var = 0;
-					for(int i = 0; i<10; i++) {
-						double edgeUtil = edgeServerManager.getEdgeUtilization(i);
-						var += (edgeUtil-edgeAvgUtil)*(edgeUtil-edgeAvgUtil);
-					}
-					var = Math.sqrt((var)/10);
+//					double edgeAvgUtil = edgeServerManager.getAvgUtilization();
+//					double var = 0;
+//					for(int i = 0; i<10; i++) {
+//						double edgeUtil = edgeServerManager.getEdgeUtilization(i);
+//						var += (edgeUtil-edgeAvgUtil)*(edgeUtil-edgeAvgUtil);
+//					}
+//					var = Math.sqrt((var)/10);
 					//SimLogger.print(Double.toString(edgeAvgUtil));
-					SimLogger.print(Double.toString(var));
+					SimLogger.print(Double.toString((int)progress/10));
+					
 					
 					
 					

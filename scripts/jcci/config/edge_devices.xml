@@ -20,7 +20,7 @@
 				<VMs>
 					<VM vmm="Xen">
 						<core>10</core>
-						<mips>6000</mips>
+						<mips>3000</mips>
 						<ram>8000</ram>
 						<storage>200000</storage>
 					</VM>
@@ -48,7 +48,7 @@
 				<VMs>
 					<VM vmm="Xen">
 						<core>10</core>
-						<mips>6000</mips>
+						<mips>3000</mips>
 						<ram>8000</ram>
 						<storage>200000</storage>
 					</VM>
@@ -76,7 +76,7 @@
 				<VMs>
 					<VM vmm="Xen">
 						<core>10</core>
-						<mips>6000</mips>
+						<mips>3000</mips>
 						<ram>8000</ram>
 						<storage>200000</storage>
 					</VM>
@@ -104,7 +104,7 @@
 				<VMs>
 					<VM vmm="Xen">
 						<core>10</core>
-						<mips>6000</mips>
+						<mips>3000</mips>
 						<ram>8000</ram>
 						<storage>200000</storage>
 					</VM>
@@ -132,7 +132,7 @@
 				<VMs>
 					<VM vmm="Xen">
 						<core>10</core>
-						<mips>6000</mips>
+						<mips>3000</mips>
 						<ram>8000</ram>
 						<storage>200000</storage>
 					</VM>
@@ -188,7 +188,7 @@
 				<VMs>
 					<VM vmm="Xen">
 						<core>10</core>
-						<mips>6000</mips>
+						<mips>3000</mips>
 						<ram>8000</ram>
 						<storage>200000</storage>
 					</VM>
@@ -216,7 +216,7 @@
 				<VMs>
 					<VM vmm="Xen">
 						<core>10</core>
-						<mips>6000</mips>
+						<mips>3000</mips>
 						<ram>8000</ram>
 						<storage>200000</storage>
 					</VM>
@@ -244,7 +244,7 @@
 				<VMs>
 					<VM vmm="Xen">
 						<core>10</core>
-						<mips>6000</mips>
+						<mips>3000</mips>
 						<ram>8000</ram>
 						<storage>200000</storage>
 					</VM>
@@ -272,7 +272,7 @@
 				<VMs>
 					<VM vmm="Xen">
 						<core>10</core>
-						<mips>6000</mips>
+						<mips>3000</mips>
 						<ram>8000</ram>
 						<storage>200000</storage>
 					</VM>

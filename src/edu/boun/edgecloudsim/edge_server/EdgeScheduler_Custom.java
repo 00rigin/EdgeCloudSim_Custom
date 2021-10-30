@@ -84,7 +84,6 @@ public class EdgeScheduler_Custom extends CloudletScheduler {
 		
 		for (ResCloudlet rcl : getCloudletExecList()) {
 			rcl.updateCloudletFinishedSoFar((long) (getCapacity(mipsShare) * timeSpam * rcl.getNumberOfPes() * Consts.MILLION));
-			
 		}
 	
 //		if (getCloudletExecList().size() == 0) {
@@ -123,63 +122,61 @@ public class EdgeScheduler_Custom extends CloudletScheduler {
 			}
 			
 		}
-		
-		if(SimManager.getInstance().getOrchestratorPolicy().equals("PROPOSED")) {
-	
-			if(!waitingList.get(1).isEmpty()) {
-				if(!waitingList.get(0).isEmpty()) { // 1클래스 웨이트 큐 비면
-					for(int k = 0; k<waitingList.get(1).size(); k++) {
-						ResCloudlet rcl = waitingList.get(1).get(k);
-						rcl.setCloudletStatus(Cloudlet.INEXEC);
-						getCloudletExecList().add(rcl);
-						waitingList.get(1).remove(rcl);
-						double reMain = (rcl.getRemainingCloudletLength() / (getCapacity(mipsShare) * rcl.getNumberOfPes()));
-						// 큐잉타임 업데이트
-						remainTime[1] -= reMain;
-					}
-					
-				}
-				// 하위 큐 대기가 대드라인 넘을것으로 예상되면 향상시켜줌
+			
+		if(!waitingList.get(1).isEmpty()) {
+			if(!waitingList.get(0).isEmpty()) { // 1클래스 웨이트 큐 비면
 				for(int k = 0; k<waitingList.get(1).size(); k++) {
 					ResCloudlet rcl = waitingList.get(1).get(k);
-					Task_Custom tc = (Task_Custom)rcl.getCloudlet();
+					rcl.setCloudletStatus(Cloudlet.INEXEC);
+					getCloudletExecList().add(rcl);
+					waitingList.get(1).remove(rcl);
 					double reMain = (rcl.getRemainingCloudletLength() / (getCapacity(mipsShare) * rcl.getNumberOfPes()));
-					if(tc.getTaskDeadline() < getRemainTime(1)+reMain) {
-						waitingList.get(0).add(rcl);
-						waitingList.get(1).remove(rcl);
-					}
-					remainTime[0] += reMain;
+					// 큐잉타임 업데이트
 					remainTime[1] -= reMain;
-					
 				}
-
+				
 			}
-			if(!waitingList.get(2).isEmpty()) {
-				if(!waitingList.get(0).isEmpty() && !waitingList.get(1).isEmpty()) { // 1클래스 웨이트 큐 비면
-					for(int k = 0; k<waitingList.get(2).size(); k++) {
-						ResCloudlet rcl = waitingList.get(2).get(k);
-						rcl.setCloudletStatus(Cloudlet.INEXEC);
-						getCloudletExecList().add(rcl);
-						waitingList.get(2).remove(rcl);
-						double reMain = (rcl.getRemainingCloudletLength() / (getCapacity(mipsShare) * rcl.getNumberOfPes()));
-						// 큐잉타임 업데이트
-						remainTime[2] -= reMain;
-					}
+			// 하위 큐 대기가 대드라인 넘을것으로 예상되면 향상시켜줌
+			for(int k = 0; k<waitingList.get(1).size(); k++) {
+				ResCloudlet rcl = waitingList.get(1).get(k);
+				Task_Custom tc = (Task_Custom)rcl.getCloudlet();
+				double reMain = (rcl.getRemainingCloudletLength() / (getCapacity(mipsShare) * rcl.getNumberOfPes()));
+				if(tc.getTaskDeadline() < getRemainTime(1)) {
+					waitingList.get(0).add(rcl);
+					waitingList.get(1).remove(rcl);
 				}
-				// 하위 큐 대기가 대드라인 넘을것으로 예상되면 향상시켜줌
+				remainTime[0] += reMain;
+				remainTime[1] -= reMain;
+				
+			}
+
+		}
+		if(!waitingList.get(2).isEmpty()) {
+			if(!waitingList.get(0).isEmpty() && !waitingList.get(1).isEmpty()) { // 1클래스 웨이트 큐 비면
 				for(int k = 0; k<waitingList.get(2).size(); k++) {
 					ResCloudlet rcl = waitingList.get(2).get(k);
-					Task_Custom tc = (Task_Custom)rcl.getCloudlet();
+					rcl.setCloudletStatus(Cloudlet.INEXEC);
+					getCloudletExecList().add(rcl);
+					waitingList.get(2).remove(rcl);
 					double reMain = (rcl.getRemainingCloudletLength() / (getCapacity(mipsShare) * rcl.getNumberOfPes()));
-					if(tc.getTaskDeadline() < getRemainTime(2)+reMain) {
-						waitingList.get(1).add(rcl);
-						waitingList.get(2).remove(rcl);
-					}
-					remainTime[1] += reMain;
+					// 큐잉타임 업데이트
 					remainTime[2] -= reMain;
-				}				
+				}
 			}
+			// 하위 큐 대기가 대드라인 넘을것으로 예상되면 향상시켜줌
+			for(int k = 0; k<waitingList.get(2).size(); k++) {
+				ResCloudlet rcl = waitingList.get(2).get(k);
+				Task_Custom tc = (Task_Custom)rcl.getCloudlet();
+				double reMain = (rcl.getRemainingCloudletLength() / (getCapacity(mipsShare) * rcl.getNumberOfPes()));
+				if(tc.getTaskDeadline() < getRemainTime(2)) {
+					waitingList.get(1).add(rcl);
+					waitingList.get(2).remove(rcl);
+				}
+				remainTime[1] += reMain;
+				remainTime[2] -= reMain;
+			}				
 		}
+		
 		
 		
 		getCloudletExecList().removeAll(toRemove);

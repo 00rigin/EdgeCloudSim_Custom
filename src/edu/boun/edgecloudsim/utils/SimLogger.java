@@ -270,9 +270,9 @@ public class SimLogger {
 	}
 
 	public void addLog(int deviceId, int taskId, int taskType,
-			int taskLenght, int taskInputType, int taskOutputSize) {
+			int taskLenght, int taskInputType, int taskOutputSize, double taskDeadline) {
 		// printLine(taskId+"->"+taskStartTime);
-		taskMap.put(taskId, new LogItem(deviceId, taskType, taskLenght, taskInputType, taskOutputSize));
+		taskMap.put(taskId, new LogItem(deviceId, taskType, taskLenght, taskInputType, taskOutputSize, taskDeadline));
 	}
 
 	public void taskStarted(int taskId, double time) {
@@ -703,6 +703,9 @@ public class SimLogger {
 		printLine("# of number of successed task : "
 				+ successTask[numOfAppTypes]);
 		
+		printLine("Success rate : "
+				+ (double)successTask[numOfAppTypes]/(double)(failedTask[numOfAppTypes] + completedTask[numOfAppTypes])*100+"%");
+		
 		printLine("# of failed tasks due to Mobility/WLAN Range/Network(WLAN/MAN/WAN/GSM): "
 				+ failedTaskDuetoMobility[numOfAppTypes]
 				+ "/" + refectedTaskDuetoWlanRange[numOfAppTypes]
@@ -773,7 +776,8 @@ public class SimLogger {
 		if (value.getStatus() == SimLogger.TASK_STATUS.COMLETED) {
 			completedTask[value.getTaskType()]++;
 			
-			if(value.getServiceTime() < 0.5)
+			if(value.getServiceTime() <= value.getTaskDeadline()) // success Ȯ��
+//			if(value.getServiceTime() <= 0.5)	
 				successTask[value.getTaskType()]++;
 			
 			if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
@@ -960,8 +964,10 @@ class LogItem {
 	private double QoE;
 	private double orchestratorOverhead;
 	private boolean isInWarmUpPeriod;
+	
+	private double taskDeadline;
 
-	LogItem(int _deviceId, int _taskType, int _taskLenght, int _taskInputType, int _taskOutputSize) {
+	LogItem(int _deviceId, int _taskType, int _taskLenght, int _taskInputType, int _taskOutputSize, double _taskDeadline) {
 		deviceId = _deviceId;
 		taskType = _taskType;
 		taskLenght = _taskLenght;
@@ -970,6 +976,11 @@ class LogItem {
 		networkError = NETWORK_ERRORS.NONE;
 		status = SimLogger.TASK_STATUS.CREATED;
 		taskEndTime = 0;
+		taskDeadline = _taskDeadline;
+	}
+	
+	public double getTaskDeadline() {
+		return taskDeadline;
 	}
 	
 	public void taskStarted(double time) {

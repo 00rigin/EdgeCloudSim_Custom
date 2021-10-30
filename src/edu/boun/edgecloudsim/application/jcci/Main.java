@@ -28,7 +28,7 @@ public class Main {
 		String edgeDevicesFile = "";
 		String applicationsFile = "";
 		
-		//¼öÁ¤ ÇÊ¿ä
+		//ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½
 		SimLogger.printLine("Simulation setting file, output folder and iteration number are not provided! Using default ones...");
 		configFile = "scripts/jcci/config/default_config.properties";
 		applicationsFile = "scripts/jcci/config/applications.xml";

@@ -31,6 +31,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 	private int startFlag = 0;
 	private boolean flg = false;
 	public int resChecker[] = {0,0,0,0,0,0,0,0,0,0};
+	public ArrayList<Double> dupChecker = new ArrayList<Double>();
 	
 	
 	public CustomEdgeOrchestrator(String _policy, String _simScenario) {
@@ -60,11 +61,11 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 		// 20211013 HJ for KSC
 		if(policy.equals("PROPOSED")) {
 			
-//			List<EdgeVM> localVM = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); // vm list : ÇöÀç´Â 1°³
+//			List<EdgeVM> localVM = SimManager.getInstance().getEdgeServerManager().getVmList(sourcePointLocation.getServingWlanId()); // vm list : ï¿½ï¿½ï¿½ï¿½ï¿½ 1ï¿½ï¿½
 			
-			double localUsage = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(sourcePointLocation.getServingWlanId()); // ÇöÀç ¿§Áö¼­¹öÀÇ À¯Æ¿¶óÀÌÁ¦ÀÌ¼Ç
+			double localUsage = SimManager.getInstance().getEdgeServerManager().getEdgeUtilization(sourcePointLocation.getServingWlanId()); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¼ï¿½
 			NetworkModel networkModel = SimManager.getInstance().getNetworkModel();	
-			result = 0; // Çù¾÷ ´ë»ó ÃÊ±âÈ­ (ÇöÀç ¿§Áö¼­¹ö ¾ÆÀÌµð)
+			result = SimUtils.getRandomNumber(0, 9); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ìµï¿½)
 			
 			ArrayList<Integer> edge = new ArrayList<>(Arrays.asList(0,1,2,3,4,5,6,7,8,9)); // NUMBER OF EDGE SERVER
 			int numofEdge = edge.size();
@@ -99,7 +100,7 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 				
 				int taskPri = task.getTaskPriority();
 				
-				// ÅÂ½ºÅ© ÀÚ½ÅÀÇ »óÀ§ Å¬·¡½º + ÀÚ½ÅÀÇ Å¬·¡½º¿¡ ´ëÇÑ Å¥À× µô·¹ÀÌ
+				// ï¿½Â½ï¿½Å© ï¿½Ú½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½ + ï¿½Ú½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å¥ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				for(int j = 0; j<taskPri; j++) {
 					try {
 						for(int k = 0; k<waitingList_e.get(j).size(); k++) {
@@ -116,22 +117,28 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 				 // Transmission delay
 				communicationDelay = networkModel.getUploadDelay(task.getMobileDeviceId(), i, dummyTask);
 				
-				processingThroughput = (double)taskSize*0.1 /(deadline - 10*Qdelay - 10*communicationDelay);
+				processingThroughput = (double)taskSize /(deadline - Qdelay - communicationDelay);
 				
-//				if(startFlag>200 && startFlag<300) {
+//				if(startFlag>600 && startFlag<1000) {
 //				
-//					System.out.println("wnaDelay : "+ communicationDelay + " | qTime : "+Qdelay+" | taskSize : "+taskSize+" | deadline : "+deadline+" | PT : "+processingThroughput+" | result : "+result);
+//					System.out.println("wnaDelay : "+ communicationDelay + " | qTime : "+Qdelay+" | taskSize : "+taskSize+" | deadline : "+deadline+" | PT : "+processingThroughput+" | Now : "+i);
 //					
 //				}
 
-				if(processingThroughput > _max_ && processingThroughput>0) {
+//				if(processingThroughput<0)
+//					System.out.println(processingThroughput);
+				
+				if(processingThroughput < _max_ && processingThroughput>=0) {	
 					processingThroughput = _max_;
 					result = i;
+					
 				}
 			}
+//			if(startFlag>600 && startFlag<1000)
+//				System.out.println("Result : "+ result);
 			
-//			resChecker[result]++;
-//			
+			resChecker[result]++;
+			
 //			if(startFlag > 1000) {
 //				for(int i = 0; i<10; i++) {
 //					System.out.print(resChecker[i] + " ");
@@ -140,6 +147,8 @@ public class CustomEdgeOrchestrator extends EdgeOrchestrator{
 //			}
 //
 			startFlag++;
+			List<EdgeVM> edgeVmList = SimManager.getInstance().getEdgeServerManager().getVmList(result);
+			task.setAllocationResource(edgeVmList.get(0).getMips());
 
 		}
 		

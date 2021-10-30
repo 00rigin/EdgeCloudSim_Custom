@@ -167,7 +167,7 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 			long _size = taskQueue.get(i).getTaskSize();
 			double _deadline = taskQueue.get(i).getTaskDeadline();
 			if(_deadline <= 0)
-				_deadline = 1;
+				_deadline = 5;
 			double _throughput = (double)_size/(double)_deadline;
 			taskMap.put(_throughput, taskQueue.get(i)); // By using treemap, sorting in done automatically
 		}
@@ -252,7 +252,8 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 				_task.getTaskType(), 
 				(int)_task.getCloudletLength(),
 				(int)_task.getCloudletFileSize(),
-				(int)_task.getCloudletOutputSize());
+				(int)_task.getCloudletOutputSize(),
+				_task.getTaskDeadline());
 		
 		
 		// 20211016 HJ timeslot 
