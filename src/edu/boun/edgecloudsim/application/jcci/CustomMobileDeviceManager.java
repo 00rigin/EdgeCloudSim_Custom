@@ -29,6 +29,8 @@ import edu.boun.edgecloudsim.utils.TaskProperty;
 import Jenks.Jenks;
 import Jenks.Jenks.Breaks;
 
+import Jenetic.Jenetic;
+
 //import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 
 
@@ -242,6 +244,8 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
 		
 		Task_Custom _task = createTask(edgeTask);
+		SimLogger.printLine("######### : "+ _task);
+		
 		
 		Location currentLocation = SimManager.getInstance().getMobilityModel().getLocation(_task.getMobileDeviceId(), CloudSim.clock());
 		
@@ -264,7 +268,10 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 		}
 		else { // larger than time th
 			ArrayList<Task_Custom> PritizedTasks = new ArrayList<Task_Custom>();
-//			SimLogger.printLine("Task : " + taskQueue);
+			
+			
+			
+			
 			if(SimManager.getInstance().getOrchestratorPolicy().equals("PROPOSED")) {
 				PritizedTasks = setPriority(); // prioritized Tasks.
 			}
@@ -279,18 +286,32 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 //				System.out.println(PritizedTasks.get(i).getTaskPriority());
 //			}
 			
+			// PritizedTasks에 리스트형태로 태스크 id들이 들어있음.
+			
+			
+			
+			
+			
+			
 			
 			for(int i = 0; i<PritizedTasks.size(); i++) {
 				Vm selectedVM = null;
 						
 				Task_Custom task = PritizedTasks.get(i);
 				
+				
+				
+				
+				
+				
+				
+				/////////// 이 안에서 최상의 학습 결과를 뽑아서 가져와야함. ///////////////
 				//original code
-				int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task); 
+				int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task);
 				// 20211024 HJ
 				
 				
-//				System.out.println("nextHopId : " + nextHopId);
+				System.out.println("nextHopId : " + nextHopId);
 				
 				delay = networkModel.getUploadDelay(task.getMobileDeviceId(), nextHopId, task);
 				vmType = SimSettings.VM_TYPES.EDGE_VM.ordinal();
@@ -314,6 +335,8 @@ public class CustomMobileDeviceManager extends MobileDeviceManager{
 					
 					networkModel.uploadStarted(currentLocation, nextDeviceForNetworkModel);
 					
+					
+					/// 타이머 시작하는 부분!
 					SimLogger.getInstance().taskStarted(task.getCloudletId(), CloudSim.clock());
 					SimLogger.getInstance().setUploadDelay(task.getCloudletId(), delay, delayType);
 

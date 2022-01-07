@@ -32,6 +32,7 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 	public void initializeModel() {
 		taskList = new ArrayList<TaskProperty>();
 		
+		
 		//exponential number generator for file input size, file output size and task length
 		//ExponentialDistribution[][] expRngList = new ExponentialDistribution[SimSettings.getInstance().getTaskLookUpTable().length][3];
 		ExponentialDistribution[][] expRngList = new ExponentialDistribution[SimSettings.getInstance().getTaskLookUpTable().length][4]; // deadline �߰��Ǹ鼭 ������ 1 �ø�
@@ -112,6 +113,7 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 				}
 				
 				taskList.add(new TaskProperty(i,randomTaskType, virtualTime, expRngList));
+				
 //				taskList.add(new TaskProperty(i, randomTaskType, virtualTime, (long)length, expRngList));
 			}
 		}

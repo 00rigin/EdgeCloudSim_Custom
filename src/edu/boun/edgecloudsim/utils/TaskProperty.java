@@ -42,6 +42,7 @@ public class TaskProperty {
 		taskDeadline = (long)expRngList[_taskType][3].sample(); //20211016 HJ taskDeadline added.
 		
 		pesNumber = (int)SimSettings.getInstance().getTaskLookUpTable()[_taskType][8];
+		
 	}
 	
 	public TaskProperty(int _mobileDeviceId, int _taskType, double _startTime, long _length, ExponentialDistribution[][] expRngList) {

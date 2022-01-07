@@ -41,7 +41,6 @@ public abstract class LoadGeneratorModel {
 	 * it will be used while generating task
 	 */
 	public static List<TaskProperty> getTaskList() {
-		
 		return taskList;
 	}
 	

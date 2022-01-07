@@ -108,6 +108,10 @@ public class SimLogger {
 	private double[] serviceTimeOnCloud = null;
 	private double[] serviceTimeOnEdge = null;
 	private double[] serviceTimeOnMobile = null;
+	
+	private double avgServiceTime; // GA에서 fitness function 짤때 사용할 예정
+	private double avgSuccessRate; // GA fitness function에서 사용할 예정
+	
 
 	private double[] processingTime = null;
 	private double[] processingTimeOnCloud = null;
@@ -138,7 +142,7 @@ public class SimLogger {
 		fileLogEnabled = false;
 		printLogEnabled = false;
 	}
-
+	
 	/* Static 'instance' method */
 	public static SimLogger getInstance() {
 		return singleton;
@@ -342,6 +346,24 @@ public class SimLogger {
 		if(SimSettings.getInstance().getApDelayLogInterval() != 0)
 			apDelayList.add(new ApDelayLogItem(time, apUploadDelays, apDownloadDelays));
 	}
+	
+	// GA에서 사용할 함수들
+	public void setAvgServiceTime() {
+		avgServiceTime = serviceTime[numOfAppTypes] / (double) completedTask[numOfAppTypes];
+	}
+	public void setAvgSuccessRate() {
+		avgSuccessRate =  (double)successTask[numOfAppTypes]/(double)(failedTask[numOfAppTypes] + completedTask[numOfAppTypes]);
+	}
+	public double getAvgServiceTime() {
+		return avgServiceTime;
+	}
+	public double getAvgSuccessRate() {
+		return avgSuccessRate;
+	}
+	
+	
+	
+	
 	
 	public void simStopped() throws IOException {
 		endTime = System.currentTimeMillis();
@@ -703,6 +725,13 @@ public class SimLogger {
 		printLine("# of number of successed task : "
 				+ successTask[numOfAppTypes]);
 		
+<<<<<<< Updated upstream
+=======
+		printLine("Success rate : "
+				+ (double)successTask[numOfAppTypes]/(double)(failedTask[numOfAppTypes] + completedTask[numOfAppTypes])*100+"%");
+		setAvgSuccessRate();
+		
+>>>>>>> Stashed changes
 		printLine("# of failed tasks due to Mobility/WLAN Range/Network(WLAN/MAN/WAN/GSM): "
 				+ failedTaskDuetoMobility[numOfAppTypes]
 				+ "/" + refectedTaskDuetoWlanRange[numOfAppTypes]
@@ -726,6 +755,7 @@ public class SimLogger {
 				+ ", " + "on Mobile: "
 				+ String.format("%.6f", serviceTimeOnMobile[numOfAppTypes] / (double) completedTaskOnMobile[numOfAppTypes])
 				+ ")");
+		setAvgServiceTime();
 
 		printLine("average processing time: "
 				+ String.format("%.6f", processingTime[numOfAppTypes] / (double) completedTask[numOfAppTypes])

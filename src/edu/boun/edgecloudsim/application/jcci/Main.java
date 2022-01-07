@@ -17,6 +17,9 @@ import edu.boun.edgecloudsim.utils.SimUtils;
 public class Main {
 
 	public static void main(String[] args) {
+		
+	
+		
 		// TODO Auto-generated method stub
 		Log.disable();
 		
@@ -53,6 +56,7 @@ public class Main {
 		String now = df.format(SimulationStartDate);
 		SimLogger.printLine("Simulation started at " + now);
 		SimLogger.printLine("----------------------------------------------------------------------");
+		
 
 		for(int j = SS.getMinNumOfMobileDev(); j <= SS.getMaxNumOfMobileDev(); j += SS.getMobileDevCounterSize()){ 
 			for(int k = 0; k < SS.getSimulationScenarios().length; k++) {
